@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IndexPrep — Student</title>
+<style>
+  :root{
+    --bg:#eceff5;--surface:#fff;--surface-2:#f7f9fc;--ink:#151f38;--muted:#5c6780;--faint:#8b95a8;
+    --line:#e1e7f1;--line-strong:#cfd7e6;--primary:#4f46e5;--primary-soft:#eef0fe;--primary-ink:#3730a3;
+    --teal:#0d9488;--green:#15a34a;--green-soft:#e7f7ed;--amber:#c2760a;--amber-soft:#fbf1e0;
+    --red:#d8452f;--red-soft:#fdece9;--shadow:0 1px 2px rgba(20,31,56,.04),0 6px 20px rgba(20,31,56,.06);
+    --r:16px;--r-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{max-width:820px;margin:0 auto;padding:0 18px 80px}
+  .top{position:sticky;top:0;z-index:20;background:rgba(236,239,245,.9);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);margin:0 -18px 22px;padding:12px 18px;display:flex;align-items:center;gap:12px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px}
+  .logo .d{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#7c73ff);
+    color:#fff;display:grid;place-items:center;font-size:13px}
+  .crumb{font-size:12.5px;color:var(--muted);margin-left:4px}
+  .crumb b{color:var(--ink)}
+  .top .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12.5px;
+    font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--primary);color:var(--primary-ink)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn.primary:hover{background:#4338ca}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  h1{font-size:26px;letter-spacing:-.02em;margin-bottom:4px}
+  h2{font-size:20px;letter-spacing:-.01em}
+  .muted{color:var(--muted)}
+  .kick{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);margin-bottom:8px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  @media(min-width:640px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;
+    box-shadow:var(--shadow);transition:.15s;text-align:left;width:100%;font:inherit;color:inherit}
+  .tile:hover{border-color:var(--primary);transform:translateY(-2px)}
+  .tile:disabled{cursor:not-allowed;opacity:.6;transform:none}
+  .tile h3{font-size:16px;margin-bottom:4px}
+  .tile p{font-size:13px;color:var(--muted)}
+  .tile .meta{font-size:11.5px;color:var(--faint);margin-top:10px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--primary-soft);color:var(--primary-ink)}
+  .pill.g{background:var(--green-soft);color:#0f7a37}.pill.a{background:var(--amber-soft);color:#8a5406}
+  .pill.gray{background:#eef1f6;color:var(--muted)}
+  .pill.bad{background:var(--red-soft);color:#a3341f}
+  .sec{display:flex;gap:16px;align-items:flex-start;padding:18px;border:1px solid var(--line);border-radius:var(--r);
+    background:var(--surface);box-shadow:var(--shadow);position:relative}
+  .sec.locked{opacity:.62}
+  .sec .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none;background:var(--primary-soft)}
+  .sec h3{font-size:16px;display:flex;align-items:center;gap:8px}
+  .sec p{font-size:13px;color:var(--muted);margin-top:3px}
+  .sec .act{margin-left:auto;align-self:center;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .lockmsg{font-size:11.5px;color:var(--amber);font-weight:600}
+  .progbar{height:7px;border-radius:5px;background:#eef1f6;overflow:hidden;margin-top:10px}
+  .progbar>span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),#818cf8)}
+  .qwrap{max-width:640px;margin:0 auto}
+  .qmeta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap}
+  .qstem{font-size:17px;font-weight:500;line-height:1.5}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+  .opt{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;
+    cursor:pointer;font-size:15px;background:var(--surface);transition:.12s;text-align:left;width:100%;font:inherit;color:inherit}
+  .opt:hover{border-color:var(--line-strong)}
+  .opt .k{width:24px;height:24px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line);
+    display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:none}
+  .opt.sel{border-color:var(--primary);background:var(--primary-soft)}
+  .opt.sel .k{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .opt.correct{border-color:var(--green);background:var(--green-soft)}
+  .opt.correct .k{background:var(--green);color:#fff;border-color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-soft)}
+  .opt.wrong .k{background:var(--red);color:#fff;border-color:var(--red)}
+  .opt .tick{margin-left:auto;font-weight:800}
+  .opt.correct .tick{color:var(--green)}.opt.wrong .tick{color:var(--red)}
+  .opt:disabled{cursor:default}
+  .fb{margin-top:18px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+  .fb .hd{padding:11px 15px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .fb.ok .hd{background:var(--green-soft);color:#0f7a37}
+  .fb.no .hd{background:var(--red-soft);color:#a3341f}
+  .fb .bd{padding:15px;background:var(--surface)}
+  .fb .sol{font-size:13.5px;color:var(--ink)}
+  .idxlink{margin-top:12px;border:1px solid #d9d6fb;background:linear-gradient(180deg,#f6f4ff,#fff);border-radius:12px;padding:13px}
+  .idxlink .lk{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;color:#7c3aed;margin-bottom:8px}
+  .idxlink .lk .sp{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#8b5cf6,var(--primary));
+    color:#fff;display:grid;place-items:center;font-size:11px}
+  .idxcard{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-top:8px;background:var(--surface)}
+  .idxcard .c{font-size:11px;font-weight:700;color:var(--primary-ink)}
+  .idxcard .s{font-size:12.5px;color:var(--ink);margin-top:3px}
+  .idxcard .cc{font-size:11.5px;color:var(--muted);margin-top:5px}
+  .corr{font-size:12.5px;color:var(--muted);margin-top:10px;font-style:italic}
+  .remember{margin-top:12px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:13px 15px}
+  .remember .rh{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .remember ul{margin:0;padding-left:18px}
+  .remember li{font-size:13px;margin:5px 0;color:var(--ink)}
+  .noteadd{margin-top:10px;border:1px dashed var(--amber);background:var(--amber-soft);border-radius:12px;padding:11px 13px}
+  .noteadd .nh{font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#8a5406;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .noteadd .src{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fff;border:1px solid var(--line);margin-left:auto;color:var(--muted)}
+  .noteadd .ntxt{font-size:13px;color:var(--ink)}
+  .notebtn{border:1px solid var(--line-strong);background:var(--surface);color:var(--primary-ink);font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer}
+  .notegrp{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+  .explain{margin-top:12px}
+  .explain .eh{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-ink);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .flash{border:1px solid #d9d6fb;border-radius:12px;overflow:hidden;cursor:pointer;background:linear-gradient(180deg,#f6f4ff,#fff)}
+  .flash .ffront{padding:12px 15px;font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .flash .ffront .tag{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#8b5cf6;color:#fff;padding:2px 7px;border-radius:5px}
+  .flash .ffront .hint{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+  .flash .fback{max-height:0;overflow:hidden;transition:max-height .25s ease;font-size:13px;color:var(--ink);padding:0 15px}
+  .flash.revealed .fback{max-height:260px;padding:12px 15px;border-top:1px solid var(--line)}
+  .flash.revealed .ffront .hint{opacity:0}
+  .video{margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .vthumb{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);cursor:pointer;border:none;font:inherit;text-align:left}
+  .vthumb .playbtn{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:14px;flex:none}
+  .vthumb .vmeta b{display:block;font-size:13px}
+  .vthumb .vmeta span{font-size:11.5px;color:var(--muted)}
+  .vplayer{display:none;background:#0f1626;color:#c8cee0;padding:26px 16px;text-align:center;font-size:12.5px;
+    background-image:linear-gradient(135deg,#1a2340,#0f1626)}
+  .video.on .vplayer{display:block}
+  .vplayer .frame{aspect-ratio:16/9;max-width:360px;margin:0 auto 10px;border:1px solid #2a3350;border-radius:8px;display:grid;place-items:center;font-size:26px;color:#5b6ba0}
+  .timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:15px;padding:6px 12px;border-radius:8px;background:var(--ink);color:#fff}
+  .timer.warn{background:var(--red)}
+  .examnav{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+  .dot{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}
+  .dot.done{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-ink)}
+  .dot.cur{outline:2px solid var(--primary);outline-offset:1px}
+  .score{font-size:44px;font-weight:800;letter-spacing:-.02em}
+  .statrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .stat{flex:1;min-width:120px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .stat .v{font-size:24px;font-weight:800}.stat .l{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600;font:inherit;color:inherit}
+  .chip.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-ink)}
+  .weakrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .weakrow:last-child{border-bottom:none}
+  .weakrow .bar{flex:1;height:8px;border-radius:5px;background:#eef1f6;overflow:hidden}
+  .weakrow .bar>span{display:block;height:100%}
+  .banner{padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px}
+  .banner.info{background:var(--primary-soft);color:var(--primary-ink)}
+  .spacer{height:16px}
+  a.inline{color:var(--primary-ink);cursor:pointer;font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--primary)}
+  .loading{padding:40px;text-align:center;color:var(--muted);font-size:14px}
+  .flashimg{border:1px solid #d9d6fb;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#f6f4ff,#fff)}
+  .flashimg .cap{padding:10px 14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .flashimg .cap .tag{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#8b5cf6;color:#fff;padding:2px 7px;border-radius:5px}
+  .fcimg{width:100%;max-height:340px;object-fit:contain;display:block;background:#faf9ff;cursor:zoom-in;border-top:1px solid var(--line)}
+  .vidplayer{width:100%;display:block;background:#000;border-radius:12px}
+  .lb{position:fixed;inset:0;background:rgba(10,15,30,.82);display:none;align-items:center;justify-content:center;z-index:100;padding:24px}
+  .lb.on{display:flex}
+  .lb .box{max-width:92vw;max-height:88vh;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .lb img,.lb video{max-width:92vw;max-height:88vh;display:block}
+  .lb iframe{width:90vw;height:86vh;border:0;background:#fff}
+  .lb .x{position:fixed;top:16px;right:22px;color:#fff;font-size:28px;cursor:pointer;font-weight:700;line-height:1}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="loading">Loading…</div></div>
+<div class="lb" id="lb"></div>
+
+<script>
+/* ============================================================
+   IndexPrep — Student app (wired to the real API)
+   Data comes from http://<origin>/api/*  — nothing is hard-coded.
+   ============================================================ */
+const SID = 'stu-demo';                 // demo login (real auth = Phase 5)
+async function api(path, method='GET', body){
+  const r = await fetch('/api'+path, {method, headers:{'Content-Type':'application/json'}, body: body?JSON.stringify(body):undefined});
+  if(!r.ok) throw new Error('API '+r.status+' '+path);
+  return r.json();
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+const S = { screen:{name:'home',subject:'phy'}, subjects:[], chapters:[], notes:[],
+  chapter:null, progress:null, indexQs:[], ii:0, sel:null, submitted:false, result:null,
+  bank:[], topics:[], weak:[], mode:'custom', topicsSel:[], qi:0,
+  examQs:[], examAns:{}, cur:0, secs:0, _timer:null, examResult:null };
+
+const $app = () => document.getElementById('app');
+function render(){ $app().innerHTML = topBar() + view(); }
+function loading(){ $app().innerHTML = '<div class="loading">Loading…</div>'; }
+function clearTimer(){ if(S._timer){clearInterval(S._timer);S._timer=null;} }
+
+/* ---------- data loaders ---------- */
+async function refreshNotes(){ try{ S.notes = await api('/notes/'+SID); }catch(e){ S.notes=[]; } }
+
+async function goHome(subject){
+  clearTimer(); S.screen={name:'home',subject:subject||S.screen.subject||'phy'};
+  loading();
+  if(!S.subjects.length) S.subjects = await api('/subjects');
+  S.chapters = await api('/chapters?subject='+S.screen.subject);
+  await refreshNotes();
+  render(); window.scrollTo(0,0);
+}
+async function goChapter(chapterId){
+  clearTimer(); loading();
+  S.chapter = await api('/chapters/'+chapterId);
+  S.topics = await api('/chapters/'+chapterId+'/topics');
+  S.progress = await api('/progress/'+SID+'/'+chapterId);
+  await refreshNotes();
+  S.screen={name:'chapter',chapterId};
+  render(); window.scrollTo(0,0);
+}
+async function goIndex(chapterId){
+  loading();
+  S.indexQs = await api('/chapters/'+chapterId+'/index-questions');
+  S.ii=0; S.sel=null; S.submitted=false; S.result=null;
+  S.screen={name:'index',chapterId};
+  render(); window.scrollTo(0,0);
+}
+async function goPracticeSetup(chapterId){
+  loading();
+  S.topics = await api('/chapters/'+chapterId+'/topics');
+  S.weak = await api('/weak-areas/'+SID+'/'+chapterId);
+  S.topicsSel = S.topics.map(t=>t.id);
+  S.screen={name:'psetup',chapterId};
+  render(); window.scrollTo(0,0);
+}
+async function goPractice(chapterId, mode){
+  loading();
+  S.bank = await api('/chapters/'+chapterId+'/bank-questions');
+  if(mode==='ai'){ S.weak = await api('/weak-areas/'+SID+'/'+chapterId); }
+  S.mode=mode; S.qi=0; S.sel=null; S.submitted=false; S.result=null;
+  S.screen={name:'practice',chapterId};
+  render(); window.scrollTo(0,0);
+}
+async function goExamSetup(chapterId){
+  loading();
+  S.bank = await api('/chapters/'+chapterId+'/bank-questions');
+  S.examN = Math.min(5, S.bank.length);
+  S.screen={name:'esetup',chapterId};
+  render(); window.scrollTo(0,0);
+}
+async function goNotes(){
+  clearTimer(); loading(); await refreshNotes();
+  S.screen={name:'notes'}; render(); window.scrollTo(0,0);
+}
+
+/* ---------- helpers ---------- */
+function subName(id){var s=S.subjects.find(x=>x.id===id);return s?s.name:id;}
+function topicName(id){var t=(S.topics||[]).find(x=>x.id===id);return t?t.name:id;}
+function practicePool(){
+  var c=S.screen.chapterId;
+  if(S.mode==='ai'){
+    var weakIds=S.weak.map(w=>w.indexId);
+    return S.bank.filter(b=> (b.maps||[]).some(m=>weakIds.indexOf(m.indexId)>=0 && (m.status==='sme_approved'||m.status==='manual')));
+  }
+  return S.bank.filter(b=> b.topics.some(t=>S.topicsSel.indexOf(t)>=0));
+}
+
+/* ---------- top bar ---------- */
+function topBar(){
+  var c=S.screen.chapterId&&S.chapter?S.chapter:null;
+  var crumb=c?'<span class="crumb"><b>'+esc(subName(c.subjectId))+'</b> › '+esc(c.name)+'</span>':'';
+  var home=S.screen.name!=='home'?'<button class="btn ghost sm" data-act="home">Home</button>':'';
+  var notes=S.notes.length>0?'<button class="notebtn" data-act="notes">📌 Notes ('+S.notes.length+')</button>':'';
+  return '<div class="top"><div class="logo"><span class="d">IQ</span> IndexPrep</div>'+crumb+
+    '<div class="sp">'+notes+home+'</div></div>';
+}
+
+/* ---------- views ---------- */
+function view(){
+  var n=S.screen.name;
+  if(n==='home') return viewHome();
+  if(n==='chapter') return viewChapter();
+  if(n==='index') return viewIndex();
+  if(n==='psetup') return viewPSetup();
+  if(n==='practice') return viewPractice();
+  if(n==='esetup') return viewESetup();
+  if(n==='exam') return viewExam();
+  if(n==='eresult') return viewEResult();
+  if(n==='notes') return viewNotes();
+  return '';
+}
+function viewHome(){
+  var subs=S.subjects.map(su=>{
+    var on=S.screen.subject===su.id;
+    return '<button class="tile" data-act="subject" data-id="'+su.id+'"'+(on?' style="border-color:var(--primary);background:var(--primary-soft)"':'')+
+      '><h3>'+esc(su.name)+'</h3><p>'+esc(su.prefix?('NEET · JEE'):'')+'</p></button>';
+  }).join('');
+  var chaps=S.chapters.map(c=>{
+    var has=c.indexCount>0;
+    return '<button class="tile" '+(has?'data-act="chapter" data-id="'+c.id+'"':'disabled')+'>'+
+      '<h3>'+esc(c.name)+'</h3><p>'+(has?(c.indexCount+' index questions · '+c.bankCount+' in question bank'):'Content being added')+'</p>'+
+      (has?'':'<div class="meta">Coming soon</div>')+'</button>';
+  }).join('');
+  return '<div class="kick">Student app · live</div><h1>What are we mastering today?</h1>'+
+    '<p class="muted">Pick a subject, then a chapter. Every chapter opens with its Index Questions.</p><div class="spacer"></div>'+
+    '<div class="grid g2">'+subs+'</div><div class="spacer"></div>'+
+    '<h2>'+esc(subName(S.screen.subject))+' — chapters</h2><div class="spacer"></div><div class="grid">'+chaps+'</div>';
+}
+function viewChapter(){
+  var c=S.chapter, pr=S.progress;
+  var done=pr.indexCompleted, ni=pr.indexTotal, pct=Math.round(pr.indexAttempted/Math.max(1,ni)*100);
+  var idxBtn=done?'Review':(pr.indexAttempted>0?'Continue':'Start');
+  function locked(icon,t,d){return '<div class="sec locked"><div class="ic">'+icon+'</div><div style="flex:1"><h3>'+t+'</h3><p>'+d+'</p></div><div class="act"><span class="lockmsg">🔒 Finish Index first</span></div></div>';}
+  var practice=done?'<div class="sec"><div class="ic">📚</div><div style="flex:1"><h3>Practice</h3><p>Custom practice by topic, or the AI Practice Book that targets your weak areas. No timer.</p></div><div class="act"><button class="btn primary" data-act="psetup" data-id="'+c.id+'">Open</button></div></div>':locked('📚','Practice','Custom practice by topic, or the AI Practice Book that targets your weak areas.');
+  var exam=done?'<div class="sec"><div class="ic">📝</div><div style="flex:1"><h3>Exam</h3><p>Choose how many questions; a timed exam is generated from this chapter.</p></div><div class="act"><button class="btn primary" data-act="esetup" data-id="'+c.id+'">Open</button></div></div>':locked('📝','Exam','Choose how many questions; a timed exam is generated from this chapter.');
+  return '<div class="kick">'+esc(subName(c.subjectId))+'</div><h1>'+esc(c.name)+'</h1>'+
+    '<p class="muted">Complete the Index Questions to unlock Practice and Exam.</p><div class="spacer"></div><div class="grid">'+
+    '<div class="sec"><div class="ic">🎯</div><div style="flex:1"><h3>Index Questions'+(done?' <span class="pill g">Completed</span>':'')+'</h3>'+
+      '<p>The '+ni+' canonical questions that define this chapter. Mandatory — unlocks the rest.</p>'+
+      '<div class="progbar"><span style="width:'+pct+'%"></span></div></div>'+
+      '<div class="act"><button class="btn primary" data-act="startindex" data-id="'+c.id+'">'+idxBtn+'</button></div></div>'+
+    practice+exam+'</div>';
+}
+
+/* question block: renders options + (after submit) feedback from server result */
+function optionButtons(q){
+  return q.options.map(o=>{
+    var k=o[0], cls='opt';
+    if(!S.submitted && S.sel===k) cls+=' sel';
+    if(S.submitted && S.result && k===S.result.correctKey) cls+=' correct';
+    if(S.submitted && S.sel===k && S.result && k!==S.result.correctKey) cls+=' wrong';
+    var tick='';
+    if(S.submitted && S.result && k===S.result.correctKey) tick='<span class="tick">✓</span>';
+    else if(S.submitted && S.sel===k && S.result && k!==S.result.correctKey) tick='<span class="tick">✗</span>';
+    return '<button class="'+cls+'" '+(S.submitted?'disabled':'data-act="sel" data-key="'+k+'"')+'><span class="k">'+k+'</span> '+esc(o[1])+tick+'</button>';
+  }).join('');
+}
+function indexLearningHTML(fb, correct){
+  var html='';
+  if(fb.keyPoints && fb.keyPoints.length){
+    html+='<div class="remember"><div class="rh">◎ Key things to remember</div><ul>'+fb.keyPoints.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul></div>';
+  }
+  html+=mediaHtml(fb.media||{});
+  if(!correct && fb.note){
+    html+='<div class="noteadd"><div class="nh">📌 Saved to your notes <span class="src">'+(fb.noteSource==='SME'?'SME note':'AI note')+'</span></div><div class="ntxt">'+esc(fb.note)+'</div></div>';
+  }
+  return html;
+}
+function mediaHtml(m){
+  var ex='';
+  if(m.flashcard){
+    var fc=m.flashcard;
+    if(fc.fileUrl && (fc.fileType==='jpeg'||fc.fileType==='png')){
+      ex+='<div class="flashimg"><div class="cap"><span class="tag">Flashcard</span> tap image to enlarge</div><img src="'+fc.fileUrl+'" class="fcimg" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="image"></div>';
+    } else if(fc.fileUrl && fc.fileType==='pdf'){
+      ex+='<div class="flash"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.fileName||'PDF flashcard')+' <button type="button" class="btn" style="margin-left:auto;padding:4px 10px;font-size:12px" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="pdf">Open PDF ↗</button></div></div>';
+    } else if(fc.front){
+      ex+='<div class="flash" data-act="flip"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.front)+' <span class="hint">tap to reveal ▾</span></div><div class="fback">'+esc(fc.back||'')+'</div></div>';
+    }
+  }
+  if(m.video){
+    if(m.video.fileUrl) ex+='<div class="video"><video src="'+m.video.fileUrl+'" class="vidplayer" controls preload="metadata"></video></div>';
+    else ex+='<div class="video"><button class="vthumb" data-act="playvid"><span class="playbtn">▶</span><span class="vmeta"><b>'+esc(m.video.title||'Video explanation')+'</b><span>'+esc(m.video.duration||'')+' · added by SME</span></span></button><div class="vplayer"><div class="frame">▶</div>Video explanation uploaded in the SME dashboard would play here.</div></div>';
+  }
+  return ex?('<div class="explain"><div class="eh">📖 Detailed explanation</div>'+ex+'</div>'):'';
+}
+function openLightbox(url,kind){
+  var lb=document.getElementById('lb'), inner='';
+  if(kind==='image') inner='<img src="'+url+'">';
+  else if(kind==='video') inner='<video src="'+url+'" controls autoplay></video>';
+  else inner='<iframe src="'+url+'"></iframe>';
+  lb.innerHTML='<div class="x" data-act="closelb">✕</div><div class="box">'+inner+'</div>';
+  lb.classList.add('on');
+}
+function closeLightbox(){ var lb=document.getElementById('lb'); lb.classList.remove('on'); lb.innerHTML=''; }
+document.getElementById('lb').addEventListener('click',e=>{ if(e.target.id==='lb') closeLightbox(); });
+function bankFeedbackHTML(fb, correct){
+  var mapped=fb.mappedIndex||[];
+  if(!correct && mapped.length>0){
+    var cards=mapped.map(m=>'<div class="idxcard"><div class="c">Index '+m.id+' · '+esc(m.concept)+'</div><div class="s">'+esc(m.stem)+'</div>'+(m.correctText?'<div class="cc">Answer: '+esc(m.correctText)+'</div>':'')+'</div>').join('');
+    var corr=mapped.length>1?'This question is a combination of two concepts you already mastered — a permutation, not a new type.':'Same core concept, new numbers. You’ve solved this type before — recall the index question and the method follows.';
+    return '<div class="idxlink"><div class="lk"><span class="sp">✦</span> This maps to '+(mapped.length>1?'index questions you’ve already done':'an index question you’ve already done')+'</div>'+cards+'<div class="corr">'+corr+'</div></div>';
+  }
+  if(!correct){ return '<div class="corr">No index-question link for this one — just review the solution above.</div>'; }
+  return '';
+}
+function questionBlock(q, type){
+  var meta='<span class="pill gray">'+(type==='index'?('Index '+q.id):'Practice')+'</span>';
+  (q.topics||(q.topicId?[q.topicId]:[])).forEach(t=>{meta+='<span class="pill">'+esc(topicName(t))+'</span>';});
+  var html='<div class="qwrap"><div class="qmeta">'+meta+'</div><div class="qstem">'+esc(q.stem)+'</div><div class="opts">'+optionButtons(q)+'</div>';
+  if(!S.submitted){
+    html+='<div style="margin-top:18px"><button class="btn primary" '+(S.sel==null?'disabled':'')+' data-act="check">Check answer</button></div>';
+  } else if(S.result){
+    var r=S.result, correct=r.correct;
+    html+='<div class="fb '+(correct?'ok':'no')+'"><div class="hd">'+(correct?'✓ Correct':'✗ Not quite')+'</div><div class="bd"><div class="sol">'+esc(r.solution)+'</div>';
+    html+= type==='index' ? indexLearningHTML(r.feedback||{}, correct) : bankFeedbackHTML(r.feedback||{}, correct);
+    html+='</div></div>';
+  }
+  return html+'</div>';
+}
+
+function viewIndex(){
+  var list=S.indexQs, q=list[S.ii], last=S.ii===list.length-1;
+  var frac=((S.ii+(S.submitted?1:0))/list.length*100);
+  var nextBtn=S.submitted?'<div style="max-width:640px;margin:18px auto 0"><button class="btn primary" data-act="nextindex" data-last="'+(last?1:0)+'">'+(last?'Finish & unlock chapter →':'Next index question →')+'</button></div>':'';
+  return '<div class="qmeta" style="justify-content:space-between"><span class="kick" style="margin:0">Index Questions · '+(S.ii+1)+' of '+list.length+'</span></div>'+
+    '<div class="progbar" style="margin-bottom:20px"><span style="width:'+frac+'%"></span></div>'+
+    '<div class="card">'+questionBlock(q,'index')+nextBtn+'</div>';
+}
+function viewPSetup(){
+  var c=S.screen.chapterId;
+  var chips=S.topics.map(t=>'<button class="chip'+(S.topicsSel.indexOf(t.id)>=0?' on':'')+'" data-act="toggletopic" data-id="'+t.id+'">'+esc(t.name)+'</button>').join('');
+  var weakHtml = S.weak.length>0
+    ? S.weak.map(w=>'<div class="weakrow"><div style="font-size:13px;font-weight:600;width:150px">'+esc(w.concept)+'</div><div class="bar"><span style="width:'+w.accuracy+'%;background:'+(w.accuracy<50?'var(--red)':'var(--amber)')+'"></span></div><div style="font-size:12px;color:var(--muted)">'+w.wrong+'× wrong</div></div>').join('')
+    : '<div class="banner info" style="margin-top:12px">Do some practice or an exam first — once you miss a few, the AI Practice Book fills up with your weak concepts.</div>';
+  return '<div class="kick">Practice · '+esc(S.chapter.name)+'</div><h1>How do you want to practise?</h1><div class="spacer"></div>'+
+    '<div class="grid g2">'+
+    '<div class="card"><span class="pill">Custom practice</span><h2 style="margin-top:10px">Pick your topics</h2><p class="muted" style="font-size:13px">Untimed. Every wrong answer links back to its index question.</p><div class="chips">'+chips+'</div><div style="margin-top:18px"><button class="btn primary" '+(S.topicsSel.length===0?'disabled':'')+' data-act="startpractice" data-mode="custom">Start practice</button></div></div>'+
+    '<div class="card"><span class="pill a">AI Practice Book</span><h2 style="margin-top:10px">Target my weak areas</h2><p class="muted" style="font-size:13px">Auto-built from your attempt history — the concepts you miss most.</p>'+weakHtml+'<div style="margin-top:18px"><button class="btn primary" '+(S.weak.length===0?'disabled':'')+' data-act="startpractice" data-mode="ai">Start AI Practice Book</button></div></div>'+
+    '</div>';
+}
+function viewPractice(){
+  var pool=practicePool();
+  if(pool.length===0) return '<div class="card">No questions match. <a class="inline" data-act="psetup" data-id="'+S.screen.chapterId+'">Go back</a></div>';
+  var q=pool[S.qi % pool.length];
+  var nextBtn=S.submitted?'<div style="max-width:640px;margin:18px auto 0;display:flex;gap:8px"><button class="btn primary" data-act="nextpractice">Next question →</button><button class="btn" data-act="psetup" data-id="'+S.screen.chapterId+'">End practice</button></div>':'';
+  return '<div class="kick">'+(S.mode==='ai'?'AI Practice Book':'Custom practice')+' · '+esc(S.chapter.name)+'</div><div class="card">'+questionBlock(q,'practice')+nextBtn+'</div>';
+}
+function viewESetup(){
+  var max=S.bank.length;
+  return '<div class="kick">Exam · '+esc(S.chapter.name)+'</div><h1>Generate a timed exam</h1><p class="muted">Pick how many questions. ~1 minute each. Feedback comes after you submit.</p><div class="spacer"></div>'+
+    '<div class="card" style="max-width:460px"><label style="font-size:13px;font-weight:600">Number of questions: <b id="nlbl" style="color:var(--primary-ink)">'+S.examN+'</b> <span class="muted">(max '+max+')</span></label>'+
+    '<input type="range" min="1" max="'+max+'" value="'+S.examN+'" data-act="examN" style="margin-top:10px">'+
+    '<div style="margin-top:12px;font-size:13px" class="muted">Time limit: <span id="tlbl">'+S.examN+'</span> min</div>'+
+    '<div style="margin-top:18px"><button class="btn primary" data-act="startexam" data-id="'+S.screen.chapterId+'">Start exam</button></div></div>';
+}
+function viewExam(){
+  var qs=S.examQs, q=qs[S.cur];
+  var mm=String(Math.floor(S.secs/60)).padStart(2,'0'), ss=String(S.secs%60).padStart(2,'0');
+  var opts=q.options.map(o=>'<button class="opt'+(S.examAns[q.id]===o[0]?' sel':'')+'" data-act="examsel" data-key="'+o[0]+'"><span class="k">'+o[0]+'</span> '+esc(o[1])+'</button>').join('');
+  var dots=qs.map((qq,idx)=>'<button class="dot'+(S.examAns[qq.id]?' done':'')+(idx===S.cur?' cur':'')+'" data-act="examgoto" data-idx="'+idx+'">'+(idx+1)+'</button>').join('');
+  var meta=q.topics.map(t=>'<span class="pill">'+esc(topicName(t))+'</span>').join('');
+  var prev=S.cur>0?'<button class="btn" data-act="examprev">← Prev</button>':'';
+  var next=S.cur<qs.length-1?'<button class="btn" data-act="examnext">Next →</button>':'';
+  return '<div class="qmeta" style="justify-content:space-between;align-items:center"><span class="kick" style="margin:0">Exam · Q'+(S.cur+1)+' of '+qs.length+'</span><span class="timer'+(S.secs<30?' warn':'')+'">'+mm+':'+ss+'</span></div>'+
+    '<div class="card"><div class="qwrap"><div class="qmeta">'+meta+'</div><div class="qstem">'+esc(q.stem)+'</div><div class="opts">'+opts+'</div><div class="examnav">'+dots+'</div>'+
+    '<div style="margin-top:18px;display:flex;gap:8px">'+prev+next+'<button class="btn primary" style="margin-left:auto" data-act="submitexam">Submit exam</button></div></div></div>';
+}
+function viewEResult(){
+  var R=S.examResult;
+  var correctCount=R.filter(x=>x.correct).length, pct=Math.round(correctCount/R.length*100);
+  var head='<div class="kick">Exam result · '+esc(S.chapter.name)+'</div><div class="card"><div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap"><div class="score" style="color:'+(pct>=60?'var(--green)':'var(--amber)')+'">'+pct+'%</div><div><div style="font-weight:700">'+correctCount+' / '+R.length+' correct</div><div class="muted" style="font-size:13px">Review below — each miss links to the index question it comes from.</div></div></div>'+
+    '<div class="statrow"><div class="stat"><div class="v" style="color:var(--green)">'+correctCount+'</div><div class="l">Correct</div></div><div class="stat"><div class="v" style="color:var(--red)">'+(R.length-correctCount)+'</div><div class="l">Wrong</div></div><div class="stat"><div class="v">'+R.length+'</div><div class="l">Total</div></div></div></div><div class="spacer"></div>';
+  var body=R.map(x=>{
+    var q=x.q, ok=x.correct, mapped=(x.feedback&&x.feedback.mappedIndex)||[];
+    var meta='<span class="pill '+(ok?'g':'bad')+'">'+(ok?'✓ Correct':'✗ Wrong')+'</span>'+q.topics.map(t=>'<span class="pill">'+esc(topicName(t))+'</span>').join('');
+    var fb='<div class="fb" style="margin-top:12px"><div class="bd"><div class="sol">'+esc(x.solution)+'</div>';
+    if(!ok && mapped.length>0){ fb+='<div class="idxlink"><div class="lk"><span class="sp">✦</span> '+(mapped.length>1?'Built from index questions you’ve done':'Maps to an index question you’ve done')+'</div>'+mapped.map(m=>'<div class="idxcard"><div class="c">Index '+m.id+' · '+esc(m.concept)+'</div><div class="s">'+esc(m.stem)+'</div></div>').join('')+'<div class="corr">'+(mapped.length>1?'A permutation of two concepts you already know — not a new type.':'Same concept, new numbers — recall the index question.')+'</div></div>'; }
+    else if(!ok){ fb+='<div class="corr">No index-question link — review the solution above.</div>'; }
+    fb+='</div></div>';
+    return '<div class="card" style="margin-bottom:14px"><div class="qmeta">'+meta+'</div><div style="font-size:15px;font-weight:500">'+esc(q.stem)+'</div><div style="font-size:13px;margin-top:10px" class="muted">Your answer: '+(x.chosen?esc((q.options.find(o=>o[0]===x.chosen)||[])[1]):'—')+' · Correct: '+esc((q.options.find(o=>o[0]===x.correctKey)||[])[1])+'</div>'+fb+'</div>';
+  }).join('');
+  return head+body+'<button class="btn primary" data-act="chapter" data-id="'+S.screen.chapterId+'">Back to chapter</button><button class="btn" style="margin-left:8px" data-act="psetup" data-id="'+S.screen.chapterId+'">Practise weak areas →</button>';
+}
+function viewNotes(){
+  if(S.notes.length===0) return '<div class="kick">My Notes</div><h1>No notes yet</h1><p class="muted">When you miss an index question, its key points and a takeaway note are saved here automatically.</p>';
+  var byCh={}; S.notes.forEach(n=>{(byCh[n.chapterId]=byCh[n.chapterId]||[]).push(n);});
+  var html='<div class="kick">My Notes</div><h1>Your saved notes</h1><p class="muted">Built from the index questions you missed — points to revise, tagged by who wrote them.</p>';
+  Object.keys(byCh).forEach(cid=>{
+    var chName=(S.chapters.find(c=>c.id===cid)||{}).name||cid;
+    html+='<div class="notegrp">'+esc(chName)+'</div>';
+    byCh[cid].forEach(n=>{
+      html+='<div class="card" style="margin-bottom:12px"><div class="qmeta"><span class="pill">Index '+n.questionId+'</span><span class="pill gray">'+esc(n.concept)+'</span></div>'+
+        '<div class="noteadd" style="margin-top:0"><div class="nh">📌 Note <span class="src">'+(n.source==='SME'?'SME note':'AI note')+'</span></div><div class="ntxt">'+esc(n.note)+'</div></div>';
+      if(n.keyPoints&&n.keyPoints.length) html+='<div class="remember"><div class="rh">◎ Key things to remember</div><ul>'+n.keyPoints.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul></div>';
+      html+='</div>';
+    });
+  });
+  return html;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('input', e=>{
+  var el=e.target.closest('[data-act="examN"]'); if(!el) return;
+  S.examN=+el.value; var n=document.getElementById('nlbl'),t=document.getElementById('tlbl');
+  if(n)n.textContent=S.examN; if(t)t.textContent=S.examN;
+});
+document.addEventListener('click', async e=>{
+  var el=e.target.closest('[data-act]'); if(!el) return;
+  var act=el.getAttribute('data-act'), id=el.getAttribute('data-id');
+  try{
+    if(act==='flip'){ el.classList.toggle('revealed'); return; }
+    if(act==='playvid'){ var v=el.closest('.video'); if(v) v.classList.toggle('on'); return; }
+    if(act==='lightbox'){ openLightbox(el.getAttribute('data-url'), el.getAttribute('data-kind')); return; }
+    if(act==='closelb'){ closeLightbox(); return; }
+    if(act==='home'){ await goHome(); }
+    else if(act==='subject'){ await goHome(id); }
+    else if(act==='chapter'){ await goChapter(id); }
+    else if(act==='notes'){ await goNotes(); }
+    else if(act==='startindex'){ await goIndex(id); }
+    else if(act==='sel'){ S.sel=el.getAttribute('data-key'); render(); }
+    else if(act==='check'){ await doCheck(); }
+    else if(act==='nextindex'){ await doNextIndex(el.getAttribute('data-last')==='1'); }
+    else if(act==='psetup'){ await goPracticeSetup(id); }
+    else if(act==='toggletopic'){ var p=S.topicsSel.indexOf(id); if(p>=0)S.topicsSel.splice(p,1); else S.topicsSel.push(id); render(); }
+    else if(act==='startpractice'){ await goPractice(S.screen.chapterId, el.getAttribute('data-mode')); }
+    else if(act==='nextpractice'){ S.qi++; S.sel=null; S.submitted=false; S.result=null; render(); }
+    else if(act==='esetup'){ await goExamSetup(id); }
+    else if(act==='startexam'){ await startExam(id); }
+    else if(act==='examsel'){ S.examAns[S.examQs[S.cur].id]=el.getAttribute('data-key'); render(); }
+    else if(act==='examgoto'){ S.cur=+el.getAttribute('data-idx'); render(); }
+    else if(act==='examprev'){ S.cur--; render(); }
+    else if(act==='examnext'){ S.cur++; render(); }
+    else if(act==='submitexam'){ await submitExam(); }
+  }catch(err){ $app().innerHTML='<div class="loading">Something went wrong talking to the server.<br>'+esc(err.message)+'</div>'; }
+});
+
+function currentSingleQ(){
+  if(S.screen.name==='index') return S.indexQs[S.ii];
+  if(S.screen.name==='practice'){ var pool=practicePool(); return pool[S.qi % pool.length]; }
+}
+async function doCheck(){
+  if(S.sel==null) return;
+  var q=currentSingleQ();
+  var type = S.screen.name==='index' ? 'index' : 'bank';
+  var section = S.screen.name==='index' ? 'index' : 'practice';
+  S.result = await api('/attempts','POST',{studentId:SID, questionId:q.id, questionType:type, section, chapterId:S.screen.chapterId, chosenKey:S.sel});
+  S.submitted=true;
+  if(type==='index' && !S.result.correct) await refreshNotes();
+  render();
+}
+async function doNextIndex(last){
+  if(last){
+    await api('/progress/complete-index','POST',{studentId:SID, chapterId:S.screen.chapterId});
+    await goChapter(S.screen.chapterId);
+  } else { S.ii++; S.sel=null; S.submitted=false; S.result=null; render(); }
+}
+async function startExam(chapterId){
+  S.examQs=S.bank.slice(0,S.examN); S.examAns={}; S.cur=0; S.secs=S.examN*60;
+  S.screen={name:'exam',chapterId}; render(); window.scrollTo(0,0);
+  clearTimer();
+  S._timer=setInterval(()=>{
+    S.secs--; if(S.secs<=0){ clearTimer(); submitExam(); return; }
+    var t=document.querySelector('.timer'); if(t){ var mm=String(Math.floor(S.secs/60)).padStart(2,'0'),ss=String(S.secs%60).padStart(2,'0'); t.textContent=mm+':'+ss; if(S.secs<30)t.classList.add('warn'); }
+  },1000);
+}
+async function submitExam(){
+  clearTimer(); loading();
+  var out=[];
+  for(const q of S.examQs){
+    var chosen=S.examAns[q.id]||null;
+    var res=await api('/attempts','POST',{studentId:SID, questionId:q.id, questionType:'bank', section:'exam', chapterId:S.screen.chapterId, chosenKey:chosen});
+    out.push({q, chosen, correct:res.correct, correctKey:res.correctKey, solution:res.solution, feedback:res.feedback});
+  }
+  S.examResult=out; S.screen={name:'eresult',chapterId:S.screen.chapterId}; render(); window.scrollTo(0,0);
+}
+
+/* boot */
+(async () => {
+  try { await goHome('phy'); }
+  catch (e) {
+    $app().innerHTML = '<div class="loading" style="line-height:1.7">'+
+      '<b style="color:var(--ink)">Can’t reach the backend.</b><br>'+
+      'This is the <b>wired</b> student app — it needs the server running.<br><br>'+
+      'In a terminal: <code>cd indexprep/server &amp;&amp; node server.js</code><br>'+
+      'then open <b>http://localhost:4000/student.html</b> (not the file directly).'+
+      '</div>';
+  }
+})();
+</script>
+</body>
+</html>

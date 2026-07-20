@@ -1,0 +1,5 @@
+node_modules/
+server/indexprep.db
+server/uploads/
+*.log
+.DS_Store

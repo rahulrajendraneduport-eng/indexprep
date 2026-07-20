@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IndexPrep — SME Console</title>
+<style>
+  :root{
+    --bg:#eceff5;--surface:#fff;--surface-2:#f7f9fc;--ink:#151f38;--muted:#5c6780;--faint:#8b95a8;
+    --line:#e1e7f1;--line-strong:#cfd7e6;--primary:#4f46e5;--primary-soft:#eef0fe;--primary-ink:#3730a3;
+    --teal:#0d9488;--teal-soft:#e2f5f2;--green:#15a34a;--green-soft:#e7f7ed;--amber:#c2760a;--amber-soft:#fbf1e0;
+    --red:#d8452f;--red-soft:#fdece9;--violet:#7c3aed;--violet-soft:#f3f0ff;
+    --shadow:0 1px 2px rgba(20,31,56,.04),0 6px 20px rgba(20,31,56,.06);--r:14px;--r-sm:9px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{max-width:960px;margin:0 auto;padding:0 18px 80px}
+  .top{position:sticky;top:0;z-index:20;background:rgba(236,239,245,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);margin:0 -18px 20px;padding:11px 18px;display:flex;align-items:center;gap:12px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px}
+  .logo .d{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--teal),#22b8a6);
+    color:#fff;display:grid;place-items:center;font-size:12px}
+  .logo .sub{font-size:11px;font-weight:700;color:var(--teal);border:1px solid var(--teal);border-radius:999px;padding:2px 8px;margin-left:2px}
+  .crumb{font-size:12.5px;color:var(--muted)}
+  .crumb b{color:var(--ink)}
+  .top .sp{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .who{font-size:12px;color:var(--muted)}
+  .who b{color:var(--ink)}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;
+    font-weight:600;padding:7px 13px;border-radius:8px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--primary);color:var(--primary-ink)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn.primary:hover{background:#4338ca}
+  .btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+  .btn.teal:hover{background:#0b7a70}
+  .btn.sm{padding:5px 10px;font-size:12px}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.danger{color:var(--red);border-color:#f0c4bb}
+  h1{font-size:24px;letter-spacing:-.02em;margin-bottom:4px}
+  h2{font-size:18px;letter-spacing:-.01em}
+  h3{font-size:15px}
+  .muted{color:var(--muted)}
+  .kick{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  @media(min-width:680px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g6{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.g6{grid-template-columns:repeat(6,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:15px;box-shadow:var(--shadow)}
+  .stat .v{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .stat .l{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .stat.warn .v{color:var(--amber)} .stat.hot .v{color:var(--red)}
+  .row{display:flex;align-items:center;gap:12px}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0}
+  .tab{padding:9px 15px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;
+    border-bottom:2px solid transparent;font:inherit}
+  .tab.on{color:var(--primary-ink);border-bottom-color:var(--primary)}
+  .tab .n{display:inline-block;min-width:18px;font-size:11px;font-weight:800;background:var(--primary-soft);color:var(--primary-ink);
+    border-radius:999px;padding:0 5px;margin-left:5px}
+  .tab .n.hot{background:var(--amber-soft);color:#8a5406}
+  .listitem{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--surface)}
+  .listitem .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .listitem .stem{font-size:14px;margin-top:8px}
+  .listitem .foot{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--primary-soft);color:var(--primary-ink)}
+  .pill.gray{background:#eef1f6;color:var(--muted)}
+  .pill.code{background:var(--violet-soft);color:var(--violet)}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+  .badge.approved{background:var(--green-soft);color:#0f7a37}
+  .badge.suggested{background:var(--amber-soft);color:#8a5406}
+  .badge.manual{background:var(--primary-soft);color:var(--primary-ink)}
+  .badge.nomatch{background:var(--red-soft);color:#a3341f}
+  .badge.media{background:var(--teal-soft);color:#0b6b62}
+  .empty{border:1px dashed var(--line-strong);border-radius:12px;padding:26px;text-align:center;color:var(--muted);font-size:13.5px}
+  .field{margin-bottom:14px}
+  .field>label{display:block;font-size:12.5px;font-weight:700;margin-bottom:6px}
+  .field .hint{font-size:11.5px;color:var(--muted);font-weight:400}
+  .input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:10px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink)}
+  .input:focus,textarea:focus,select:focus{outline:2px solid var(--primary-soft);border-color:var(--primary)}
+  textarea{min-height:64px;resize:vertical;line-height:1.5}
+  .row2{display:grid;gap:12px}
+  @media(min-width:600px){.row2{grid-template-columns:1fr 1fr}}
+  .optline{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .optline .rk{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted);flex:none;width:74px}
+  .optline input[type=radio]{accent-color:var(--green);width:16px;height:16px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 13px;font-size:12.5px;cursor:pointer;font-weight:600;font:inherit;color:inherit}
+  .chip.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-ink)}
+  .filebox{border:1px dashed var(--line-strong);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+  .filebox b{color:var(--ink)}
+  .divider{height:1px;background:var(--line);margin:18px 0}
+  .sub-sec{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--teal);margin:4px 0 12px}
+  .ai{border:1px solid #c9b8ff;border-radius:12px;overflow:hidden;margin-top:4px}
+  .ai .ah{background:linear-gradient(120deg,var(--violet),#6366f1);color:#fff;padding:10px 14px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .ai .ab{padding:14px;background:var(--violet-soft)}
+  .sugg{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .sugg .st{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .score{display:flex;align-items:center;gap:8px;margin:8px 0}
+  .score .bar{width:120px;height:7px;border-radius:5px;background:#eef1f6;overflow:hidden}
+  .score .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--violet),var(--primary))}
+  .score .v{font-size:12px;font-weight:700;color:var(--violet)}
+  .rationale{font-size:12.5px;color:var(--muted);font-style:italic}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .picker{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;background:var(--surface-2)}
+  .checkline{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .checkline:last-child{border-bottom:none}
+  .checkline input{margin-top:3px;accent-color:var(--primary);width:16px;height:16px}
+  .spacer{height:14px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;transition:.25s;z-index:50}
+  .toast.show{opacity:1}
+  .loading{padding:44px;text-align:center;color:var(--muted);font-size:14px}
+  .thumb{width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--line-strong);cursor:pointer;vertical-align:middle}
+  .lb{position:fixed;inset:0;background:rgba(10,15,30,.82);display:none;align-items:center;justify-content:center;z-index:100;padding:24px}
+  .lb.on{display:flex}
+  .lb .box{max-width:92vw;max-height:88vh;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .lb img,.lb video{max-width:92vw;max-height:88vh;display:block}
+  .lb iframe{width:90vw;height:86vh;border:0;background:#fff}
+  .lb .x{position:fixed;top:16px;right:22px;color:#fff;font-size:28px;cursor:pointer;font-weight:700;line-height:1}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="loading">Loading…</div></div>
+<div class="toast" id="toast"></div>
+<div class="lb" id="lb"></div>
+
+<script>
+/* ============================================================
+   IndexPrep — SME Console (wired to the real API)
+   Everything written here lands in the same database the
+   student app reads from.
+   ============================================================ */
+async function api(path, method='GET', body){
+  const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!r.ok) throw new Error('API '+r.status+' '+path);
+  return r.json();
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+const S={screen:{name:'home'}, stats:null, subjects:[], chapters:[], chapterId:null, chapter:null,
+  topics:[], indexQs:[], bankQs:[], tab:'index', form:{}, reviewId:null, remapOpen:false, remapSel:[]};
+
+const $app=()=>document.getElementById('app');
+function render(){ $app().innerHTML=topBar()+view(); }
+function loading(){ $app().innerHTML='<div class="loading">Loading…</div>'; }
+
+/* ---------- loaders ---------- */
+async function goHome(){
+  loading();
+  if(!S.subjects.length) S.subjects=await api('/subjects');
+  S.stats=await api('/stats');
+  S.chapters=await api('/chapters');
+  S.screen={name:'home'}; render(); window.scrollTo(0,0);
+}
+async function loadChapter(id){
+  S.chapterId=id;
+  S.chapter=await api('/chapters/'+id);
+  S.topics=await api('/chapters/'+id+'/topics');
+  S.indexQs=await api('/chapters/'+id+'/index-questions');
+  S.bankQs=await api('/chapters/'+id+'/bank-questions');
+}
+async function goChapter(id, tab){
+  loading(); await loadChapter(id||S.chapterId); S.tab=tab||S.tab||'index';
+  S.screen={name:'chapter',chapterId:S.chapterId}; render(); window.scrollTo(0,0);
+}
+async function goReview(bankId){
+  loading(); await loadChapter(S.chapterId);
+  S.reviewId=bankId; S.remapOpen=false;
+  S.screen={name:'review',chapterId:S.chapterId}; render(); window.scrollTo(0,0);
+}
+
+/* ---------- helpers ---------- */
+function subName(id){var s=S.subjects.find(x=>x.id===id);return s?s.name:id;}
+function topicName(id){var t=S.topics.find(x=>x.id===id);return t?t.name:id;}
+function fval(f){return S.form[f]==null?'':S.form[f];}
+
+/* ---------- top bar ---------- */
+function topBar(){
+  var c=S.chapterId&&S.chapter?S.chapter:null;
+  var crumb=(S.screen.name!=='home'&&c)?'<span class="crumb"><b>'+esc(subName(c.subjectId))+'</b> › '+esc(c.name)+'</span>':'';
+  var home=S.screen.name!=='home'?'<button class="btn ghost sm" data-act="home">← All chapters</button>':'';
+  return '<div class="top"><div class="logo"><span class="d">IQ</span> IndexPrep <span class="sub">SME Console</span></div>'+crumb+
+    '<div class="sp">'+home+'<span class="who">Signed in as <b>SME · Physics</b></span></div></div>';
+}
+function view(){
+  var n=S.screen.name;
+  if(n==='home') return viewHome();
+  if(n==='chapter') return viewChapter();
+  if(n==='indexform') return viewIndexForm();
+  if(n==='bankform') return viewBankForm();
+  if(n==='review') return viewReview();
+  return '';
+}
+
+function viewHome(){
+  var s=S.stats;
+  var stats='<div class="grid g6" style="margin-bottom:20px">'+
+    '<div class="stat"><div class="v">'+s.subjects+'</div><div class="l">Subjects</div></div>'+
+    '<div class="stat"><div class="v">'+s.chaptersWithContent+'</div><div class="l">Chapters w/ content</div></div>'+
+    '<div class="stat"><div class="v">'+s.indexQuestions+'</div><div class="l">Index questions</div></div>'+
+    '<div class="stat"><div class="v">'+s.bankQuestions+'</div><div class="l">Bank questions</div></div>'+
+    '<div class="stat warn"><div class="v">'+s.pending+'</div><div class="l">Mappings to review</div></div>'+
+    '<div class="stat"><div class="v">'+s.topics+'</div><div class="l">Topics</div></div></div>';
+  var chaps=S.chapters.map(function(c){
+    return '<div class="listitem"><div class="h"><span class="pill gray">'+esc(subName(c.subjectId))+'</span> <b>'+esc(c.name)+'</b>'+
+      (c.pendingCount>0?' <span class="badge suggested">'+c.pendingCount+' to review</span>':'')+'</div>'+
+      '<div class="foot"><span class="muted" style="font-size:12.5px">'+c.indexCount+' index · '+c.bankCount+' bank</span>'+
+      '<button class="btn teal sm" style="margin-left:auto" data-act="openchap" data-id="'+c.id+'">Manage content</button></div></div>';
+  }).join('');
+  return '<div class="kick">Content management · live</div><h1>Question content by chapter</h1>'+
+    '<p class="muted">Add index questions first, then build the question bank — every bank question is matched to an index question for your approval. Everything you save is instantly live for students.</p><div class="spacer"></div>'+
+    stats+'<h2>Chapters</h2><div class="spacer"></div>'+chaps;
+}
+
+function viewChapter(){
+  var c=S.chapter;
+  var ni=S.indexQs.length, nb=S.bankQs.length, np=S.bankQs.filter(b=>b.review==='pending').length;
+  var tabs='<div class="tabs">'+
+    '<button class="tab'+(S.tab==='index'?' on':'')+'" data-act="tab" data-t="index">Index Questions <span class="n">'+ni+'</span></button>'+
+    '<button class="tab'+(S.tab==='bank'?' on':'')+'" data-act="tab" data-t="bank">Question Bank <span class="n">'+nb+'</span></button>'+
+    '<button class="tab'+(S.tab==='review'?' on':'')+'" data-act="tab" data-t="review">Mapping Review'+(np>0?' <span class="n hot">'+np+'</span>':'')+'</button></div>';
+  var body=S.tab==='index'?tabIndex():S.tab==='bank'?tabBank():tabReview();
+  return '<div class="kick">'+esc(subName(c.subjectId))+'</div><h1>'+esc(c.name)+'</h1>'+tabs+body;
+}
+function tabIndex(){
+  var add='<div class="row" style="justify-content:space-between;margin-bottom:14px"><h2>Index questions</h2><button class="btn primary" data-act="addindex">+ Add index question</button></div>';
+  if(S.indexQs.length===0) return add+'<div class="empty">No index questions yet. Add them first to unlock the question bank.</div>';
+  var items=S.indexQs.map(function(q){
+    var media=[];
+    var m=q.media||{};
+    if(m.flashcard){
+      if(m.flashcard.fileUrl && (m.flashcard.fileType==='jpeg'||m.flashcard.fileType==='png'))
+        media.push('<img src="'+m.flashcard.fileUrl+'" class="thumb" data-act="lightbox" data-url="'+m.flashcard.fileUrl+'" data-kind="image" title="click to enlarge">');
+      else if(m.flashcard.fileUrl && m.flashcard.fileType==='pdf')
+        media.push('<span class="badge media" style="cursor:pointer" data-act="lightbox" data-url="'+m.flashcard.fileUrl+'" data-kind="pdf">🃏 Flashcard · PDF ↗</span>');
+      else { var ft=m.flashcard.fileName?(' · '+(/\.pdf$/i.test(m.flashcard.fileName)?'PDF':'JPEG')):''; media.push('<span class="badge media">🃏 Flashcard'+ft+'</span>'); }
+    }
+    if(m.video){
+      if(m.video.fileUrl) media.push('<span class="badge media" style="cursor:pointer" data-act="lightbox" data-url="'+m.video.fileUrl+'" data-kind="video">🎬 Video ▶</span>');
+      else media.push('<span class="badge media">🎬 Video</span>');
+    }
+    if(q.keyPoints&&q.keyPoints.length) media.push('<span class="badge media">◎ Key points</span>');
+    if(q.note) media.push('<span class="badge media">📌 Note</span>');
+    return '<div class="listitem"><div class="h"><span class="pill code">'+q.id+'</span><span class="pill">'+esc(topicName(q.topicId))+'</span> <b>'+esc(q.concept)+'</b></div>'+
+      '<div class="stem">'+esc(q.stem)+'</div><div class="foot">'+(media.join(' ')||'<span class="muted" style="font-size:12px">No media attached</span>')+'</div></div>';
+  }).join('');
+  return add+items;
+}
+function tabBank(){
+  var add='<div class="row" style="justify-content:space-between;margin-bottom:14px"><h2>Question bank</h2><button class="btn primary" data-act="addbank"'+(S.indexQs.length===0?' disabled':'')+'>+ Add bank question</button></div>';
+  if(S.indexQs.length===0) return add+'<div class="empty">Add index questions first — the bank can only be built once there are index questions to map against.</div>';
+  if(S.bankQs.length===0) return add+'<div class="empty">No bank questions yet.</div>';
+  return add+S.bankQs.map(bankRowHtml).join('');
+}
+function bankRowHtml(b){
+  var mapHtml;
+  if(b.solutionOnly){ mapHtml='<span class="badge" style="background:#eef1f6;color:var(--muted)">Solution only · no index</span>'; }
+  else if(b.noMatch){ mapHtml='<span class="badge nomatch">⚠ No match — needs an index question</span>'; }
+  else if((b.maps||[]).length===0){ mapHtml='<span class="badge suggested">Unmapped</span>'; }
+  else { mapHtml=b.maps.map(function(m){
+    var st=m.status==='sme_approved'?'approved':(m.status==='manual'?'manual':'suggested');
+    var lbl=st==='approved'?'✓ '+m.indexId:(st==='manual'?'✎ '+m.indexId:'AI '+m.indexId+' ('+Math.round(m.score*100)+'%)');
+    return '<span class="badge '+st+'">'+lbl+'</span>';
+  }).join(' '); }
+  var btn=(b.review==='pending')?'<button class="btn teal sm" style="margin-left:auto" data-act="review" data-id="'+b.id+'">Review mapping →</button>'
+    :'<button class="btn sm" style="margin-left:auto" data-act="review" data-id="'+b.id+'">View</button>';
+  return '<div class="listitem"><div class="h">'+b.topics.map(t=>'<span class="pill">'+esc(topicName(t))+'</span>').join(' ')+
+    (b.review==='pending'?' <span class="badge suggested">Pending review</span>':'')+'</div>'+
+    '<div class="stem">'+esc(b.stem)+'</div><div class="foot">'+mapHtml+btn+'</div></div>';
+}
+function tabReview(){
+  var list=S.bankQs.filter(b=>b.review==='pending');
+  if(list.length===0) return '<div class="empty">Nothing to review 🎉 — every bank question has an approved mapping.</div>';
+  return '<p class="muted" style="margin-bottom:14px">These questions were matched by AI and need your approval, correction, or a new index question.</p>'+list.map(bankRowHtml).join('');
+}
+
+/* ---------- form media previews ---------- */
+function flashPrev(){
+  if(S.form.flashcardFileUrl){
+    if(S.form.flashcardFileType==='pdf') return '<b>'+esc(S.form.flashcardFileName)+'</b> (PDF) <button type="button" class="btn sm" data-act="lightbox" data-url="'+S.form.flashcardFileUrl+'" data-kind="pdf">Preview ↗</button>';
+    return '<img src="'+S.form.flashcardFileUrl+'" class="thumb" data-act="lightbox" data-url="'+S.form.flashcardFileUrl+'" data-kind="image"> <b>'+esc(S.form.flashcardFileName)+'</b> — click to enlarge';
+  }
+  return S.form.flashcardFileName?('<b>'+esc(S.form.flashcardFileName)+'</b> selected'):'or upload flashcard — JPEG / PDF';
+}
+function videoPrev(){
+  if(S.form.videoUrl) return '<b>'+esc(S.form.videoName)+'</b> uploaded ✓ <button type="button" class="btn sm" data-act="lightbox" data-url="'+S.form.videoUrl+'" data-kind="video">Preview ▶</button>';
+  return S.form.videoName?('<b>'+esc(S.form.videoName)+'</b> selected'):'no file selected';
+}
+
+/* ---------- index question form ---------- */
+function viewIndexForm(){
+  var c=S.chapter;
+  var topicOpts=S.topics.map(t=>'<option value="'+t.id+'"'+(S.form.topicId===t.id?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+  var hint=S.form.fromNoMatch?'<div class="ai" style="margin-bottom:16px"><div class="ah">✦ Creating this index question to cover an unmatched bank question</div><div class="ab" style="font-size:13px">Bank question: “'+esc(S.form.fromStem||'')+'”. Once saved, you can map that question to this new index question.</div></div>':'';
+  function opt(k){return '<div class="optline"><span class="rk"><input type="radio" name="correct" data-field="correct" value="'+k+'"'+(S.form.correct===k?' checked':'')+'> '+k+' correct</span><input class="input" data-field="o'+k+'" placeholder="Option '+k+'" value="'+esc(fval('o'+k))+'"></div>';}
+  return '<div class="kick">'+esc(c.name)+' · new index question</div><h1>Add index question</h1>'+hint+
+    '<div class="card">'+
+    '<div class="field"><label>Topic</label><select data-field="topicId"><option value="">Select a topic…</option>'+topicOpts+'</select>'+
+      '<div class="row" style="gap:8px;margin-top:8px"><input class="input" data-field="_newTopic" placeholder="Or add a new topic…" value="'+esc(fval('_newTopic'))+'" style="flex:1"><button class="btn" data-act="addtopic" data-ctx="index">+ Add topic</button></div></div>'+
+    '<div class="field"><label>Question stem</label><textarea data-field="stem" placeholder="Type the question…">'+esc(fval('stem'))+'</textarea></div>'+
+    '<div class="field"><label>Options <span class="hint">(select the correct one)</span></label>'+opt('A')+opt('B')+opt('C')+opt('D')+'</div>'+
+    '<div class="row2"><div class="field"><label>Concept label</label><input class="input" data-field="concept" placeholder="e.g. Parallel-axis theorem" value="'+esc(fval('concept'))+'"></div>'+
+    '<div class="field"><label>Difficulty</label><select data-field="difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option></select></div></div>'+
+    '<div class="field"><label>Solution</label><textarea data-field="solution" placeholder="Full worked solution…">'+esc(fval('solution'))+'</textarea></div>'+
+    '<div class="divider"></div><div class="sub-sec">Learning aids shown to students</div>'+
+    '<div class="field"><label>Key things to remember <span class="hint">(one per line)</span></label><textarea data-field="keypoints" placeholder="One key point per line…">'+esc(fval('keypoints'))+'</textarea></div>'+
+    '<div class="field"><label>Takeaway note <span class="hint">(saved to a student\'s Notes on a miss)</span></label><textarea data-field="note" placeholder="A short note to remember…">'+esc(fval('note'))+'</textarea></div>'+
+    '<div class="field"><label>Flashcard <span class="hint">(type a text card, and/or upload a JPEG / PDF)</span></label>'+
+      '<div class="row2"><input class="input" data-field="flashFront" placeholder="Front — prompt / question" value="'+esc(fval('flashFront'))+'"><input class="input" data-field="flashBack" placeholder="Back — answer / explanation" value="'+esc(fval('flashBack'))+'"></div>'+
+      '<div class="filebox" style="margin-top:10px">🃏 <input type="file" data-field="flashcardFile" accept="image/jpeg,.jpg,.jpeg,application/pdf,.pdf"> <span class="fname">'+flashPrev()+'</span></div></div>'+
+    '<div class="field"><label>Video explanation <span class="hint">(upload a file)</span></label><div class="filebox">🎬 <input type="file" data-field="video" accept="video/*"> <span class="fname">'+videoPrev()+'</span></div></div>'+
+    '<div class="actions"><button class="btn primary" data-act="saveindex">Save index question</button><button class="btn" data-act="cancelform">Cancel</button></div></div>';
+}
+
+/* ---------- bank question form ---------- */
+function viewBankForm(){
+  var c=S.chapter;
+  var chips=S.topics.map(t=>{var on=(S.form.topics||[]).indexOf(t.id)>=0;return '<button class="chip'+(on?' on':'')+'" data-act="btoggle" data-id="'+t.id+'">'+esc(t.name)+'</button>';}).join('');
+  function opt(k){return '<div class="optline"><span class="rk"><input type="radio" name="correct" data-field="correct" value="'+k+'"'+(S.form.correct===k?' checked':'')+'> '+k+' correct</span><input class="input" data-field="o'+k+'" placeholder="Option '+k+'" value="'+esc(fval('o'+k))+'"></div>';}
+  return '<div class="kick">'+esc(c.name)+' · new bank question</div><h1>Add bank question</h1>'+
+    '<p class="muted">On save, AI suggests which index question(s) this maps to — you approve or correct it.</p><div class="spacer"></div>'+
+    '<div class="card">'+
+    '<div class="field"><label>Topic(s) <span class="hint">(drives the concept match)</span></label><div class="chips">'+chips+'</div>'+
+      '<div class="row" style="gap:8px;margin-top:10px"><input class="input" data-field="_newTopic" placeholder="Or add a new topic…" value="'+esc(fval('_newTopic'))+'" style="flex:1"><button class="btn" data-act="addtopic" data-ctx="bank">+ Add topic</button></div></div>'+
+    '<div class="field"><label>Question stem</label><textarea data-field="stem" placeholder="Type the question…">'+esc(fval('stem'))+'</textarea></div>'+
+    '<div class="field"><label>Options</label>'+opt('A')+opt('B')+opt('C')+opt('D')+'</div>'+
+    '<div class="field"><label>Solution</label><textarea data-field="solution" placeholder="Worked solution…">'+esc(fval('solution'))+'</textarea></div>'+
+    '<div class="actions"><button class="btn primary" data-act="savebank">Save &amp; run AI match</button><button class="btn" data-act="cancelform">Cancel</button></div></div>';
+}
+
+/* ---------- review / mapping ---------- */
+function viewReview(){
+  var b=S.bankQs.find(x=>x.id===S.reviewId);
+  if(!b) return '<div class="empty">Question not found. <a class="btn sm" data-act="tab" data-t="bank">Back</a></div>';
+  var c=S.chapter;
+  var head='<div class="kick">'+esc(c.name)+' · mapping review</div><h1>Review concept mapping</h1>'+
+    '<div class="card" style="margin-bottom:16px"><div class="h">'+b.topics.map(t=>'<span class="pill">'+esc(topicName(t))+'</span>').join(' ')+'</div>'+
+    '<div class="stem" style="font-size:15px;margin-top:8px">'+esc(b.stem)+'</div></div>';
+  var panel;
+  if(b.noMatch){
+    panel='<div class="ai"><div class="ah">✦ AI found no matching index question</div><div class="ab">'+
+      '<p style="font-size:13.5px;margin-bottom:6px">None of this chapter\'s index questions cover this concept — usually a sign a <b>new index question is needed</b>.</p>'+
+      '<div class="actions"><button class="btn primary" data-act="createidx" data-id="'+b.id+'">+ Create new index question</button>'+
+      '<button class="btn" data-act="openremap" data-id="'+b.id+'">Map to an existing one anyway</button>'+
+      '<button class="btn" data-act="solonly" data-id="'+b.id+'">Mark solution-only</button></div></div></div>';
+  } else {
+    var sugg=(b.maps||[]).map(function(m){
+      var iq=S.indexQs.find(x=>x.id===m.indexId)||{concept:'',topicId:''};
+      var stTxt=m.status==='sme_approved'?'<span class="badge approved">✓ Approved</span>':(m.status==='manual'?'<span class="badge manual">✎ Manual</span>':'<span class="badge suggested">AI suggested</span>');
+      return '<div class="sugg"><div class="st"><span class="pill code">'+m.indexId+'</span><span class="pill">'+esc(topicName(iq.topicId))+'</span> <b>'+esc(iq.concept)+'</b> '+stTxt+'</div>'+
+        '<div class="score"><span class="bar"><span style="width:'+Math.round(m.score*100)+'%"></span></span><span class="v">'+Math.round(m.score*100)+'% match</span></div>'+
+        '<div class="rationale">'+esc(m.rationale)+'</div></div>';
+    }).join('')||'<p class="muted" style="font-size:13px">No suggestions.</p>';
+    var acts=b.review==='pending'
+      ? '<div class="actions"><button class="btn primary" data-act="approve" data-id="'+b.id+'">✓ Approve mapping</button><button class="btn" data-act="openremap" data-id="'+b.id+'">✎ Re-map manually</button><button class="btn danger" data-act="flagnomatch" data-id="'+b.id+'">⚠ No good match</button></div>'
+      : '<div class="actions"><button class="btn" data-act="openremap" data-id="'+b.id+'">✎ Change mapping</button></div>';
+    panel='<div class="ai"><div class="ah">✦ AI concept match'+(b.review==='pending'?' · awaiting your approval':' · approved')+'</div><div class="ab">'+sugg+acts+'</div></div>';
+  }
+  var remap='';
+  if(S.remapOpen){
+    var picker=S.indexQs.map(function(iq){
+      var on=S.remapSel.indexOf(iq.id)>=0;
+      return '<label class="checkline"><input type="checkbox" data-act="remaptoggle" data-id="'+iq.id+'"'+(on?' checked':'')+'><span><b>'+iq.id+'</b> · '+esc(topicName(iq.topicId))+' — '+esc(iq.concept)+'<br><span class="muted" style="font-size:12px">'+esc(iq.stem)+'</span></span></label>';
+    }).join('');
+    remap='<div class="picker"><div class="sub-sec" style="margin-bottom:8px">Select the index question(s) this maps to</div>'+picker+
+      '<div class="actions"><button class="btn primary" data-act="saveremap" data-id="'+b.id+'"'+(S.remapSel.length===0?' disabled':'')+'>Save mapping</button><button class="btn" data-act="closeremap">Cancel</button></div></div>';
+  }
+  return head+panel+remap+'<div class="spacer"></div><button class="btn" data-act="tab" data-t="review">← Back to review queue</button>';
+}
+
+/* ---------- events ---------- */
+document.addEventListener('input',e=>{var el=e.target.closest('[data-field]');if(el && el.type!=='file')setField(el);});
+document.addEventListener('change',e=>{var el=e.target.closest('[data-field]');if(!el)return;if(el.type==='file')handleFileField(el);else setField(el);});
+function setField(el){
+  var f=el.getAttribute('data-field');
+  if(el.type==='radio'){if(el.checked)S.form[f]=el.value;return;}
+  S.form[f]=el.value;
+}
+function fileToBase64(file){return new Promise((res,rej)=>{var r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
+async function handleFileField(el){
+  var f=el.getAttribute('data-field'); var file=el.files&&el.files[0]; if(!file) return;
+  toast('Uploading '+file.name+'…');
+  try{
+    var b64=await fileToBase64(file);
+    var up=await api('/upload','POST',{name:file.name,type:file.type,dataBase64:b64});
+    if(f==='flashcardFile'){ S.form.flashcardFileName=file.name; S.form.flashcardFileType=up.fileType; S.form.flashcardFileUrl=up.url; }
+    else if(f==='video'){ S.form.videoName=file.name; S.form.videoUrl=up.url; S.form.videoType=up.fileType; }
+    toast(file.name+' uploaded ✓'); render();
+  }catch(err){ toast('Upload failed: '+err.message); }
+}
+function openLightbox(url,kind){
+  var lb=document.getElementById('lb'), inner='';
+  if(kind==='image') inner='<img src="'+url+'">';
+  else if(kind==='video') inner='<video src="'+url+'" controls autoplay></video>';
+  else inner='<iframe src="'+url+'"></iframe>';
+  lb.innerHTML='<div class="x" data-act="closelb">✕</div><div class="box">'+inner+'</div>';
+  lb.classList.add('on');
+}
+function closeLightbox(){ var lb=document.getElementById('lb'); lb.classList.remove('on'); lb.innerHTML=''; }
+document.getElementById('lb').addEventListener('click',e=>{ if(e.target.id==='lb') closeLightbox(); });
+
+document.addEventListener('click', async e=>{
+  var el=e.target.closest('[data-act]'); if(!el) return;
+  var act=el.getAttribute('data-act'), id=el.getAttribute('data-id');
+  try{
+    if(act==='lightbox'){ openLightbox(el.getAttribute('data-url'), el.getAttribute('data-kind')); return; }
+    if(act==='closelb'){ closeLightbox(); return; }
+    if(act==='home'){ await goHome(); }
+    else if(act==='openchap'){ await goChapter(id,'index'); }
+    else if(act==='tab'){ S.tab=el.getAttribute('data-t'); S.screen={name:'chapter',chapterId:S.chapterId}; render(); }
+    else if(act==='addindex'){ S.form={}; S.screen={name:'indexform',chapterId:S.chapterId}; render(); window.scrollTo(0,0); }
+    else if(act==='addbank'){ S.form={topics:[]}; S.screen={name:'bankform',chapterId:S.chapterId}; render(); window.scrollTo(0,0); }
+    else if(act==='btoggle'){ S.form.topics=S.form.topics||[]; var p=S.form.topics.indexOf(id); if(p>=0)S.form.topics.splice(p,1); else S.form.topics.push(id); render(); }
+    else if(act==='addtopic'){ await addTopic(el.getAttribute('data-ctx')); }
+    else if(act==='cancelform'){ await goChapter(S.chapterId); }
+    else if(act==='saveindex'){ await saveIndex(); }
+    else if(act==='savebank'){ await saveBank(); }
+    else if(act==='review'){ await goReview(id); }
+    else if(act==='approve'){ await api('/bank-questions/'+id+'/approve','POST'); toast('Mapping approved'); await goReview(id); }
+    else if(act==='openremap'){ var b=S.bankQs.find(x=>x.id===id); S.remapSel=(b.maps||[]).map(m=>m.indexId); S.remapOpen=true; render(); }
+    else if(act==='closeremap'){ S.remapOpen=false; render(); }
+    else if(act==='remaptoggle'){ var q=id; var p=S.remapSel.indexOf(q); if(p>=0)S.remapSel.splice(p,1); else S.remapSel.push(q); render(); }
+    else if(act==='saveremap'){ await api('/bank-questions/'+id+'/remap','POST',{indexIds:S.remapSel}); S.remapOpen=false; toast('Mapping updated'); await goReview(id); }
+    else if(act==='flagnomatch'){ await api('/bank-questions/'+id+'/no-match','POST'); toast('Flagged — a new index question may be needed'); await goReview(id); }
+    else if(act==='solonly'){ await api('/bank-questions/'+id+'/solution-only','POST'); toast('Marked as solution-only'); await goReview(id); }
+    else if(act==='createidx'){ var bb=S.bankQs.find(x=>x.id===id); S.form={topicId:(bb.topics[0]||''),fromNoMatch:true,fromStem:bb.stem,fromBankId:bb.id}; S.screen={name:'indexform',chapterId:S.chapterId}; render(); window.scrollTo(0,0); }
+  }catch(err){ toast('Error: '+err.message); }
+});
+
+async function addTopic(ctx){
+  var name=(S.form._newTopic||'').trim();
+  if(!name){ toast('Type a topic name first'); return; }
+  var t=await api('/topics','POST',{chapterId:S.chapterId, name});
+  if(t && t.error){ toast(t.error); return; }
+  S.topics=await api('/chapters/'+S.chapterId+'/topics');   // refresh dropdown/chips
+  S.form._newTopic='';
+  if(ctx==='bank'){ S.form.topics=S.form.topics||[]; if(S.form.topics.indexOf(t.id)<0) S.form.topics.push(t.id); }
+  else { S.form.topicId=t.id; }                              // auto-select in the index form
+  toast(t.existed?('Topic "'+t.name+'" already existed — selected it'):('Topic "'+t.name+'" added'));
+  render();
+}
+async function saveIndex(){
+  if(!S.form.topicId||!S.form.stem||!S.form.correct){ toast('Add a topic, stem, and mark the correct option'); return; }
+  var options=['A','B','C','D'].map(k=>[k, S.form['o'+k]||'']).filter(o=>o[1]!=='');
+  var body={ chapterId:S.chapterId, topicId:S.form.topicId, stem:S.form.stem, options, correct:S.form.correct,
+    concept:S.form.concept, solution:S.form.solution,
+    keyPoints:(S.form.keypoints||'').split('\n').map(x=>x.trim()).filter(Boolean),
+    note:S.form.note, flashcardFront:S.form.flashFront, flashcardBack:S.form.flashBack,
+    flashcardFileName:S.form.flashcardFileName||'',
+    flashcardFileType:S.form.flashcardFileType||(S.form.flashcardFileName?(/\.pdf$/i.test(S.form.flashcardFileName)?'pdf':'jpeg'):''),
+    flashcardFileUrl:S.form.flashcardFileUrl||'',
+    videoName:S.form.videoName||'', videoUrl:S.form.videoUrl||'', videoTitle:'Video explanation' };
+  var r=await api('/index-questions','POST',body);
+  var fromBank=S.form.fromBankId;
+  toast('Index question '+r.id+' added — live for students');
+  if(fromBank){ await goReview(fromBank); } else { await goChapter(S.chapterId,'index'); }
+}
+async function saveBank(){
+  if(!(S.form.topics&&S.form.topics.length)||!S.form.stem){ toast('Pick at least one topic and add a stem'); return; }
+  var options=['A','B','C','D'].map(k=>[k, S.form['o'+k]||'']).filter(o=>o[1]!=='');
+  var body={ chapterId:S.chapterId, topics:S.form.topics.slice(), stem:S.form.stem, options, correct:S.form.correct||null, solution:S.form.solution };
+  var r=await api('/bank-questions','POST',body);
+  toast(r.noMatch?'No match found — review needed':'AI suggested '+r.suggestions.length+' mapping(s) — please review');
+  await goReview(r.id);
+}
+
+/* boot */
+(async () => {
+  try { await goHome(); }
+  catch (e) {
+    $app().innerHTML = '<div class="loading" style="line-height:1.7">'+
+      '<b style="color:var(--ink)">Can’t reach the backend.</b><br>'+
+      'This is the <b>wired</b> SME console — it needs the server running.<br><br>'+
+      'In a terminal: <code>cd indexprep/server &amp;&amp; node server.js</code><br>'+
+      'then open <b>http://localhost:4000/sme.html</b> (not the file directly).'+
+      '</div>';
+  }
+})();
+</script>
+</body>
+</html>
