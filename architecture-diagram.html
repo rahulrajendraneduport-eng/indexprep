@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IndexPrep — System Architecture</title>
+<style>
+  :root{
+    --indigo:#4f46e5; --indigo-dark:#3730a3; --indigo-soft:#eef2ff;
+    --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#14b8a6;
+    --ink:#1e293b; --muted:#64748b; --faint:#8b95a8;
+    --line:#cbd5e1; --card:#ffffff; --bg:#f8fafc;
+    --amber:#b45309; --amber-soft:#fffbeb; --amber-line:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.45;
+    padding:32px 24px 56px;
+  }
+  .page{max-width:1180px;margin:0 auto}
+  header.hero{text-align:center;margin-bottom:8px}
+  header.hero h1{font-size:27px;font-weight:800;letter-spacing:-0.5px}
+  header.hero h1 .mk{color:var(--indigo)}
+  header.hero p{color:var(--muted);font-size:14px;margin-top:6px}
+  .live{display:inline-flex;align-items:center;gap:7px;margin-top:12px;
+    background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;
+    padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,.2)}
+  .live a{color:#047857;font-weight:700;text-decoration:none;border-bottom:1px solid #6ee7b7}
+
+  /* stacked layer flow */
+  .flow{margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:0}
+  .layer{width:100%;background:var(--card);border:1.5px solid var(--line);
+    border-radius:16px;padding:18px 20px 20px;position:relative;
+    box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .layer.browser{border-color:#c7d2fe}
+  .layer.server{border-color:#99f6e4}
+  .layer.db{border-color:#99f6e4}
+  .layer-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .badge{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;
+    justify-content:center;font-size:20px;flex-shrink:0}
+  .badge.i{background:var(--indigo-soft)}
+  .badge.t{background:var(--teal-soft)}
+  .layer-head h2{font-size:16px;font-weight:750}
+  .layer-head .sub{font-size:12.5px;color:var(--muted);font-weight:500}
+  .tag{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.3px;
+    text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .tag.i{background:var(--indigo-soft);color:var(--indigo-dark)}
+  .tag.t{background:var(--teal-soft);color:#0f766e}
+
+  .cards{display:grid;gap:12px}
+  .cards.two{grid-template-columns:1fr 1fr}
+  .cards.three{grid-template-columns:1fr 1fr 1fr}
+  .card{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#fdfdff}
+  .card h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .card h3 .ic{font-size:15px}
+  .card p{font-size:12px;color:var(--muted);margin-top:5px}
+  .card .file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;color:var(--indigo);background:var(--indigo-soft);
+    padding:1px 6px;border-radius:5px;display:inline-block;margin-top:8px}
+  .card .file.t{color:#0f766e;background:var(--teal-soft)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .chip{font-size:11px;font-weight:600;color:var(--ink);background:#f1f5f9;
+    border:1px solid #e2e8f0;padding:3px 9px;border-radius:7px}
+  .chip .k{color:var(--faint);font-weight:500}
+
+  /* connectors */
+  .conn{display:flex;flex-direction:column;align-items:center;padding:2px 0}
+  .conn .arrow{width:2px;height:20px;background:linear-gradient(var(--line),var(--line))}
+  .conn .pill{font-size:11.5px;font-weight:650;color:var(--muted);
+    background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:4px 13px;margin:5px 0;white-space:nowrap}
+  .conn .pill b{color:var(--ink)}
+  .conn .updown{display:flex;gap:5px;font-size:11px;color:var(--faint)}
+
+  /* deploy pipeline */
+  .deploy{margin-top:30px;border:1.5px dashed #cbd5e1;border-radius:16px;
+    padding:18px 20px;background:#fcfcfe}
+  .deploy .dh{display:flex;align-items:center;gap:10px;margin-bottom:15px}
+  .deploy .dh h2{font-size:15px;font-weight:750}
+  .deploy .dh .sub{font-size:12px;color:var(--muted);margin-left:auto}
+  .pipe{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .step{flex:1;min-width:150px;background:#fff;border:1px solid var(--line);
+    border-radius:11px;padding:12px 13px}
+  .step .n{font-size:11px;font-weight:700;color:var(--faint)}
+  .step h4{font-size:13px;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:6px}
+  .step p{font-size:11.5px;color:var(--muted);margin-top:4px}
+  .parrow{display:flex;align-items:center;justify-content:center;
+    color:var(--line);font-size:22px;padding:0 6px;flex:0 0 auto}
+
+  /* footer notes */
+  .notes{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .note{border-radius:13px;padding:15px 17px}
+  .note.lang{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #ddd6fe}
+  .note.next{background:var(--amber-soft);border:1px solid #fde68a}
+  .note h3{font-size:13.5px;font-weight:750;display:flex;align-items:center;gap:8px}
+  .note.next h3{color:var(--amber)}
+  .note ul{list-style:none;margin-top:9px;display:flex;flex-direction:column;gap:7px}
+  .note li{font-size:12px;color:var(--ink);display:flex;gap:8px;align-items:flex-start}
+  .note li .b{color:var(--indigo);font-weight:800;line-height:1.2}
+  .note.next li .b{color:var(--amber-line)}
+  .note li .k{color:var(--muted)}
+
+  footer.foot{text-align:center;margin-top:30px;color:var(--faint);font-size:11.5px}
+
+  @media (max-width:720px){
+    .cards.two,.cards.three,.notes{grid-template-columns:1fr}
+    .parrow{transform:rotate(90deg)}
+  }
+  @media print{body{background:#fff;padding:0}.layer,.card,.step{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1><span class="mk">Index</span>Prep — System Architecture</h1>
+    <p>NEET / JEE Index-Questions learning platform · one-page technical overview</p>
+    <div class="live">
+      <span class="dot"></span> Live in production
+      <a href="https://indexprep.onrender.com">indexprep.onrender.com</a>
+    </div>
+  </header>
+
+  <div class="flow">
+
+    <!-- LAYER 1: BROWSER -->
+    <section class="layer browser">
+      <div class="layer-head">
+        <div class="badge i">🖥️</div>
+        <div>
+          <h2>The Browser — what people see &amp; click</h2>
+          <div class="sub">Runs on the student's / teacher's device · no install, just a web link</div>
+        </div>
+        <span class="tag i">Frontend</span>
+      </div>
+      <div class="cards two">
+        <div class="card">
+          <h3><span class="ic">🎓</span> Student App</h3>
+          <p>Learn the index questions, practice, take timed exams, get wrong-answer feedback &amp; auto-notes, track weak areas.</p>
+          <span class="file">public/student.html</span>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🧑‍🏫</span> SME / Teacher Console</h3>
+          <p>Add index questions, upload flashcards (JPEG/PDF) &amp; videos, review the question bank, approve AI concept-maps.</p>
+          <span class="file">public/sme.html</span>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip"><span class="k">Built with</span> HTML</span>
+        <span class="chip"><span class="k">·</span> CSS</span>
+        <span class="chip"><span class="k">·</span> Vanilla JavaScript</span>
+        <span class="chip"><span class="k">·</span> no framework, no build step</span>
+      </div>
+    </section>
+
+    <!-- connector 1 -->
+    <div class="conn">
+      <div class="arrow"></div>
+      <div class="pill">🔒 <b>HTTPS</b> · browser calls <b>fetch('/api/…')</b></div>
+      <div class="updown">▲ answers &amp; feedback&nbsp;&nbsp;|&nbsp;&nbsp;requests ▼</div>
+      <div class="arrow"></div>
+    </div>
+
+    <!-- LAYER 2: SERVER -->
+    <section class="layer server">
+      <div class="layer-head">
+        <div class="badge t">⚙️</div>
+        <div>
+          <h2>The API Server — the brain (authoritative logic)</h2>
+          <div class="sub">Hosted on <b>Render</b> (free web service) · decides everything, trusts nothing from the browser</div>
+        </div>
+        <span class="tag t">Backend</span>
+      </div>
+      <div class="cards three">
+        <div class="card">
+          <h3><span class="ic">✅</span> Decides correctness</h3>
+          <p>Answer keys never leave the server. It grades every attempt and builds the feedback.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🔗</span> Index-Question logic</h3>
+          <p>Maps wrong answers to their index question(s), gates chapter completion, computes weak areas.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">📥</span> Files &amp; REST API</h3>
+          <p>Serves the pages, stores uploads, and exposes <b>/api/…</b> endpoints for everything.</p>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip"><span class="k">Language</span> JavaScript</span>
+        <span class="chip"><span class="k">Runtime</span> Node.js</span>
+        <span class="chip"><span class="k">·</span> built-in http module</span>
+        <span class="chip"><span class="k">File</span> server/server.js</span>
+      </div>
+    </section>
+
+    <!-- connector 2 -->
+    <div class="conn">
+      <div class="arrow"></div>
+      <div class="pill">🗄️ <b>SQL</b> over a secure connection · via <b>DATABASE_URL</b></div>
+      <div class="updown">▲ stored data&nbsp;&nbsp;|&nbsp;&nbsp;save / read ▼</div>
+      <div class="arrow"></div>
+    </div>
+
+    <!-- LAYER 3: DB -->
+    <section class="layer db">
+      <div class="layer-head">
+        <div class="badge t">💾</div>
+        <div>
+          <h2>The Database — permanent memory</h2>
+          <div class="sub"><b>PostgreSQL on Supabase</b> (free tier) in production · built-in <b>SQLite</b> for local testing</div>
+        </div>
+        <span class="tag t">Storage</span>
+      </div>
+      <div class="cards three">
+        <div class="card">
+          <h3><span class="ic">📚</span> Content</h3>
+          <p>Subjects, chapters, topics, index questions, the question bank &amp; concept-maps.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">📊</span> Student data</h3>
+          <p>Every attempt, chapter progress, auto-generated notes &amp; weak-area history.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🖼️</span> Uploads</h3>
+          <p>Flashcard images/PDFs &amp; videos stored right inside the DB, so they survive restarts.</p>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip"><span class="k">Same code, two engines →</span> Postgres (live)</span>
+        <span class="chip">SQLite (local)</span>
+        <span class="chip"><span class="k">chosen automatically by</span> DATABASE_URL</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- DEPLOY PIPELINE -->
+  <section class="deploy">
+    <div class="dh">
+      <div class="badge i" style="width:34px;height:34px;font-size:17px">🚀</div>
+      <h2>How updates go live — automatically</h2>
+      <span class="sub">no downloads, no terminal · one push and it's live in ~1–2 min</span>
+    </div>
+    <div class="pipe">
+      <div class="step">
+        <div class="n">STEP 1</div>
+        <h4>✏️ Edit the code</h4>
+        <p>Change a feature or fix a bug in the project files.</p>
+      </div>
+      <div class="parrow">→</div>
+      <div class="step">
+        <div class="n">STEP 2</div>
+        <h4>🐙 Push to GitHub</h4>
+        <p>Code saved to the repo — the single source of truth.</p>
+      </div>
+      <div class="parrow">→</div>
+      <div class="step">
+        <div class="n">STEP 3</div>
+        <h4>🔄 Render rebuilds</h4>
+        <p>Render sees the push &amp; auto-deploys the new version.</p>
+      </div>
+      <div class="parrow">→</div>
+      <div class="step">
+        <div class="n">STEP 4</div>
+        <h4>🌐 Live for students</h4>
+        <p>Everyone refreshes and sees the update instantly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTES -->
+  <div class="notes">
+    <div class="note lang">
+      <h3>🧩 Languages &amp; tools at a glance</h3>
+      <ul>
+        <li><span class="b">›</span><span><b>JavaScript</b> — everywhere (browser + server)</span></li>
+        <li><span class="b">›</span><span><b>HTML &amp; CSS</b> — <span class="k">the pages &amp; styling</span></span></li>
+        <li><span class="b">›</span><span><b>SQL</b> — <span class="k">talking to the database</span></span></li>
+        <li><span class="b">›</span><span><b>Node.js · Render · Supabase · GitHub</b></span></li>
+      </ul>
+    </div>
+    <div class="note next">
+      <h3>🛠️ Not built yet (planned next)</h3>
+      <ul>
+        <li><span class="b">›</span><span><b>Login accounts</b> <span class="k">— today it runs on one demo student</span></span></li>
+        <li><span class="b">›</span><span><b>Real Claude AI matching</b> <span class="k">— currently a smart keyword stand-in</span></span></li>
+        <li><span class="b">›</span><span><b>Dedicated video storage</b> <span class="k">— to keep the free DB lean</span></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="foot">
+    IndexPrep architecture · Browser → Node.js API (Render) → PostgreSQL (Supabase) · auto-deployed from GitHub
+  </footer>
+
+</div>
+</body>
+</html>
