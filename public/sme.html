@@ -138,7 +138,7 @@ async function api(path, method='GET', body){
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
 
-const S={screen:{name:'home'}, stats:null, subjects:[], chapters:[], chapterId:null, chapter:null,
+const S={screen:{name:'home'}, stats:null, courses:[], subjects:[], chapters:[], chapterId:null, chapter:null,
   topics:[], indexQs:[], bankQs:[], tab:'index', form:{}, reviewId:null, remapOpen:false, remapSel:[]};
 
 const $app=()=>document.getElementById('app');
@@ -148,7 +148,8 @@ function loading(){ $app().innerHTML='<div class="loading">Loading…</div>'; }
 /* ---------- loaders ---------- */
 async function goHome(){
   loading();
-  if(!S.subjects.length) S.subjects=await api('/subjects');
+  if(!S.courses.length) S.courses=await api('/courses');
+  S.subjects=await api('/subjects');
   S.stats=await api('/stats');
   S.chapters=await api('/chapters');
   S.screen={name:'home'}; render(); window.scrollTo(0,0);
@@ -172,20 +173,24 @@ async function goReview(bankId){
 
 /* ---------- helpers ---------- */
 function subName(id){var s=S.subjects.find(x=>x.id===id);return s?s.name:id;}
+function courseName(id){var c=S.courses.find(x=>x.id===id);return c?c.name:id;}
+function subCourse(subjectId){var s=S.subjects.find(x=>x.id===subjectId);return s?s.course_id:'';}
+function courseSubLabel(subjectId){return courseName(subCourse(subjectId))+' · '+subName(subjectId);}
 function topicName(id){var t=S.topics.find(x=>x.id===id);return t?t.name:id;}
 function fval(f){return S.form[f]==null?'':S.form[f];}
 
 /* ---------- top bar ---------- */
 function topBar(){
   var c=S.chapterId&&S.chapter?S.chapter:null;
-  var crumb=(S.screen.name!=='home'&&c)?'<span class="crumb"><b>'+esc(subName(c.subjectId))+'</b> › '+esc(c.name)+'</span>':'';
+  var crumb=(S.screen.name!=='home'&&c)?'<span class="crumb"><b>'+esc(courseName(subCourse(c.subjectId)))+'</b> › '+esc(subName(c.subjectId))+' › '+esc(c.name)+'</span>':'';
   var home=S.screen.name!=='home'?'<button class="btn ghost sm" data-act="home">← All chapters</button>':'';
   return '<div class="top"><div class="logo"><span class="d">IQ</span> IndexPrep <span class="sub">SME Console</span></div>'+crumb+
-    '<div class="sp">'+home+'<span class="who">Signed in as <b>SME · Physics</b></span></div></div>';
+    '<div class="sp">'+home+'<span class="who">Signed in as <b>Content team</b></span></div></div>';
 }
 function view(){
   var n=S.screen.name;
   if(n==='home') return viewHome();
+  if(n==='chapterform') return viewChapterForm();
   if(n==='chapter') return viewChapter();
   if(n==='indexform') return viewIndexForm();
   if(n==='bankform') return viewBankForm();
@@ -203,14 +208,14 @@ function viewHome(){
     '<div class="stat warn"><div class="v">'+s.pending+'</div><div class="l">Mappings to review</div></div>'+
     '<div class="stat"><div class="v">'+s.topics+'</div><div class="l">Topics</div></div></div>';
   var chaps=S.chapters.map(function(c){
-    return '<div class="listitem"><div class="h"><span class="pill gray">'+esc(subName(c.subjectId))+'</span> <b>'+esc(c.name)+'</b>'+
+    return '<div class="listitem"><div class="h"><span class="pill gray">'+esc(courseSubLabel(c.subjectId))+'</span> <b>'+esc(c.name)+'</b>'+
       (c.pendingCount>0?' <span class="badge suggested">'+c.pendingCount+' to review</span>':'')+'</div>'+
       '<div class="foot"><span class="muted" style="font-size:12.5px">'+c.indexCount+' index · '+c.bankCount+' bank</span>'+
       '<button class="btn teal sm" style="margin-left:auto" data-act="openchap" data-id="'+c.id+'">Manage content</button></div></div>';
-  }).join('');
+  }).join('')||'<div class="empty">No chapters yet. Add one to get started.</div>';
   return '<div class="kick">Content management · live</div><h1>Question content by chapter</h1>'+
     '<p class="muted">Add index questions first, then build the question bank — every bank question is matched to an index question for your approval. Everything you save is instantly live for students.</p><div class="spacer"></div>'+
-    stats+'<h2>Chapters</h2><div class="spacer"></div>'+chaps;
+    stats+'<div class="row" style="justify-content:space-between;margin-bottom:10px"><h2>Chapters</h2><button class="btn teal" data-act="addchapter">+ Add chapter</button></div>'+chaps;
 }
 
 function viewChapter(){
@@ -286,6 +291,21 @@ function flashPrev(){
 function videoPrev(){
   if(S.form.videoUrl) return '<b>'+esc(S.form.videoName)+'</b> uploaded ✓ <button type="button" class="btn sm" data-act="lightbox" data-url="'+S.form.videoUrl+'" data-kind="video">Preview ▶</button>';
   return S.form.videoName?('<b>'+esc(S.form.videoName)+'</b> selected'):'no file selected';
+}
+
+/* ---------- add chapter form (Course → Subject → name) ---------- */
+function viewChapterForm(){
+  var cid=S.form.courseId||'';
+  var courseOpts=S.courses.map(c=>'<option value="'+c.id+'"'+(cid===c.id?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+  var subs=S.subjects.filter(s=>s.course_id===cid);
+  var subOpts=subs.map(s=>'<option value="'+s.id+'"'+(S.form.subjectId===s.id?' selected':'')+'>'+esc(s.name)+'</option>').join('');
+  return '<div class="kick">Content management · new chapter</div><h1>Add a chapter</h1>'+
+    '<p class="muted">Chapters belong to a specific course and subject — pick both, then name the chapter. NEET-Physics and JEE-Physics are kept separate.</p><div class="spacer"></div>'+
+    '<div class="card" style="max-width:540px">'+
+    '<div class="field"><label>Course</label><select data-field="courseId"><option value="">Select a course…</option>'+courseOpts+'</select></div>'+
+    '<div class="field"><label>Subject</label><select data-field="subjectId"'+(cid?'':' disabled')+'><option value="">'+(cid?'Select a subject…':'Choose a course first')+'</option>'+subOpts+'</select></div>'+
+    '<div class="field"><label>Chapter name</label><input class="input" data-field="chapterName" placeholder="e.g. Rotational Motion" value="'+esc(fval('chapterName'))+'"></div>'+
+    '<div class="actions"><button class="btn primary" data-act="savechapter">Create chapter</button><button class="btn" data-act="cancelchapter">Cancel</button></div></div>';
 }
 
 /* ---------- index question form ---------- */
@@ -371,7 +391,7 @@ function viewReview(){
 
 /* ---------- events ---------- */
 document.addEventListener('input',e=>{var el=e.target.closest('[data-field]');if(el && el.type!=='file')setField(el);});
-document.addEventListener('change',e=>{var el=e.target.closest('[data-field]');if(!el)return;if(el.type==='file')handleFileField(el);else setField(el);});
+document.addEventListener('change',e=>{var el=e.target.closest('[data-field]');if(!el)return;if(el.type==='file'){handleFileField(el);return;}setField(el);if(el.getAttribute('data-field')==='courseId'){S.form.subjectId='';render();}});
 function setField(el){
   var f=el.getAttribute('data-field');
   if(el.type==='radio'){if(el.checked)S.form[f]=el.value;return;}
@@ -407,6 +427,9 @@ document.addEventListener('click', async e=>{
     if(act==='lightbox'){ openLightbox(el.getAttribute('data-url'), el.getAttribute('data-kind')); return; }
     if(act==='closelb'){ closeLightbox(); return; }
     if(act==='home'){ await goHome(); }
+    else if(act==='addchapter'){ S.form={}; S.screen={name:'chapterform'}; render(); window.scrollTo(0,0); }
+    else if(act==='savechapter'){ await saveChapter(); }
+    else if(act==='cancelchapter'){ await goHome(); }
     else if(act==='openchap'){ await goChapter(id,'index'); }
     else if(act==='tab'){ S.tab=el.getAttribute('data-t'); S.screen={name:'chapter',chapterId:S.chapterId}; render(); }
     else if(act==='addindex'){ S.form={}; S.screen={name:'indexform',chapterId:S.chapterId}; render(); window.scrollTo(0,0); }
@@ -439,6 +462,13 @@ async function addTopic(ctx){
   else { S.form.topicId=t.id; }                              // auto-select in the index form
   toast(t.existed?('Topic "'+t.name+'" already existed — selected it'):('Topic "'+t.name+'" added'));
   render();
+}
+async function saveChapter(){
+  if(!S.form.courseId||!S.form.subjectId||!(S.form.chapterName||'').trim()){ toast('Pick a course and subject, then name the chapter'); return; }
+  var r=await api('/chapters','POST',{subjectId:S.form.subjectId, name:S.form.chapterName.trim()});
+  if(r&&r.error){ toast(r.error); return; }
+  toast('Chapter "'+r.name+'" created — now add its index questions');
+  await goChapter(r.id,'index');
 }
 async function saveIndex(){
   if(!S.form.topicId||!S.form.stem||!S.form.correct){ toast('Add a topic, stem, and mark the correct option'); return; }

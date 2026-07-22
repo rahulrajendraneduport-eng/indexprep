@@ -175,7 +175,8 @@ async function api(path, method='GET', body){
 }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-const S = { screen:{name:'home',subject:'phy'}, subjects:[], chapters:[], notes:[],
+const S = { screen:{name:'course'}, courses:[], course:null, courseName:'', subject:null, subjectName:'',
+  subjects:[], chapters:[], notes:[],
   chapter:null, progress:null, indexQs:[], ii:0, sel:null, submitted:false, result:null,
   bank:[], topics:[], weak:[], mode:'custom', topicsSel:[], qi:0,
   examQs:[], examAns:{}, cur:0, secs:0, _timer:null, examResult:null };
@@ -185,32 +186,82 @@ function render(){ $app().innerHTML = topBar() + view(); }
 function loading(){ $app().innerHTML = '<div class="loading">Loading…</div>'; }
 function clearTimer(){ if(S._timer){clearInterval(S._timer);S._timer=null;} }
 
+/* ---------- browser-history navigation (Back = exactly one level up) ----------
+   Each forward navigation pushes one history entry, in hierarchy order
+   (course → subject → chapter list → chapter → sub-screen). The browser's own
+   Back — hardware, gesture, or the in-app button — therefore always steps up
+   exactly one level, and popstate re-renders whatever screen it lands on. */
+let RESTORING=false;
+function pushScreen(){
+  if(RESTORING) return;
+  history.pushState({name:S.screen.name, course:S.course, subject:S.subject, chapterId:S.screen.chapterId}, '');
+}
+async function restore(d){
+  RESTORING=true;
+  try{
+    if(!d || !d.name || d.name==='course'){ await goCourseSelect(); }
+    else {
+      S.course=d.course||S.course; S.subject=d.subject||S.subject;
+      if(d.name==='subject') await goSubjects(d.course||S.course);
+      else if(d.name==='chapterlist') await goChapterList(d.subject||S.subject);
+      else if(d.name==='notes') await goNotes();
+      else if(d.chapterId){
+        if(d.name==='index') await goIndex(d.chapterId);
+        else if(d.name==='psetup') await goPracticeSetup(d.chapterId);
+        else if(d.name==='esetup') await goExamSetup(d.chapterId);
+        else await goChapter(d.chapterId);   // chapter, or transient practice/exam/eresult → safe parent
+      } else { await goCourseSelect(); }
+    }
+  } finally { RESTORING=false; }
+}
+window.addEventListener('popstate', e=>{ clearTimer(); restore(e.state); });
+function goBack(){ history.back(); }
+
 /* ---------- data loaders ---------- */
 async function refreshNotes(){ try{ S.notes = await api('/notes/'+SID); }catch(e){ S.notes=[]; } }
 
-async function goHome(subject){
-  clearTimer(); S.screen={name:'home',subject:subject||S.screen.subject||'phy'};
-  loading();
-  if(!S.subjects.length) S.subjects = await api('/subjects');
-  S.chapters = await api('/chapters?subject='+S.screen.subject);
+async function goCourseSelect(){
+  clearTimer(); loading();
+  if(!S.courses.length) S.courses = await api('/courses');
+  S.screen={name:'course'};
+  render(); window.scrollTo(0,0); pushScreen();
+}
+async function goSubjects(course){
+  clearTimer(); loading();
+  S.course=course;
+  if(!S.courses.length) S.courses = await api('/courses');
+  S.courseName=(S.courses.find(c=>c.id===course)||{}).name||course;
+  S.subjects = await api('/subjects?course='+course);
   await refreshNotes();
-  render(); window.scrollTo(0,0);
+  S.screen={name:'subject'};
+  render(); window.scrollTo(0,0); pushScreen();
+}
+async function goChapterList(subjectId){
+  clearTimer(); loading();
+  S.subject=subjectId;
+  if(!S.subjects.length && S.course) S.subjects = await api('/subjects?course='+S.course);
+  S.subjectName=(S.subjects.find(s=>s.id===subjectId)||{}).name||subjectId;
+  S.chapters = await api('/chapters?subject='+subjectId);
+  await refreshNotes();
+  S.screen={name:'chapterlist'};
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goChapter(chapterId){
   clearTimer(); loading();
   S.chapter = await api('/chapters/'+chapterId);
+  if(!S.subject) S.subject = S.chapter.subjectId;
   S.topics = await api('/chapters/'+chapterId+'/topics');
   S.progress = await api('/progress/'+SID+'/'+chapterId);
   await refreshNotes();
   S.screen={name:'chapter',chapterId};
-  render(); window.scrollTo(0,0);
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goIndex(chapterId){
   loading();
   S.indexQs = await api('/chapters/'+chapterId+'/index-questions');
   S.ii=0; S.sel=null; S.submitted=false; S.result=null;
   S.screen={name:'index',chapterId};
-  render(); window.scrollTo(0,0);
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goPracticeSetup(chapterId){
   loading();
@@ -218,7 +269,7 @@ async function goPracticeSetup(chapterId){
   S.weak = await api('/weak-areas/'+SID+'/'+chapterId);
   S.topicsSel = S.topics.map(t=>t.id);
   S.screen={name:'psetup',chapterId};
-  render(); window.scrollTo(0,0);
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goPractice(chapterId, mode){
   loading();
@@ -226,18 +277,18 @@ async function goPractice(chapterId, mode){
   if(mode==='ai'){ S.weak = await api('/weak-areas/'+SID+'/'+chapterId); }
   S.mode=mode; S.qi=0; S.sel=null; S.submitted=false; S.result=null;
   S.screen={name:'practice',chapterId};
-  render(); window.scrollTo(0,0);
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goExamSetup(chapterId){
   loading();
   S.bank = await api('/chapters/'+chapterId+'/bank-questions');
   S.examN = Math.min(5, S.bank.length);
   S.screen={name:'esetup',chapterId};
-  render(); window.scrollTo(0,0);
+  render(); window.scrollTo(0,0); pushScreen();
 }
 async function goNotes(){
   clearTimer(); loading(); await refreshNotes();
-  S.screen={name:'notes'}; render(); window.scrollTo(0,0);
+  S.screen={name:'notes'}; render(); window.scrollTo(0,0); pushScreen();
 }
 
 /* ---------- helpers ---------- */
@@ -254,18 +305,24 @@ function practicePool(){
 
 /* ---------- top bar ---------- */
 function topBar(){
-  var c=S.screen.chapterId&&S.chapter?S.chapter:null;
-  var crumb=c?'<span class="crumb"><b>'+esc(subName(c.subjectId))+'</b> › '+esc(c.name)+'</span>':'';
-  var home=S.screen.name!=='home'?'<button class="btn ghost sm" data-act="home">Home</button>':'';
+  var n=S.screen.name, deep=(n!=='course'&&n!=='subject');
+  var parts=[];
+  if(S.courseName && n!=='course') parts.push('<b>'+esc(S.courseName)+'</b>');
+  if(S.subjectName && deep) parts.push(esc(S.subjectName));
+  if(S.chapter && deep && n!=='chapterlist') parts.push(esc(S.chapter.name));
+  var crumb=parts.length?'<span class="crumb">'+parts.join(' › ')+'</span>':'';
+  var back=n!=='course'?'<button class="btn ghost sm" data-act="back">← Back</button>':'';
   var notes=S.notes.length>0?'<button class="notebtn" data-act="notes">📌 Notes ('+S.notes.length+')</button>':'';
   return '<div class="top"><div class="logo"><span class="d">IQ</span> IndexPrep</div>'+crumb+
-    '<div class="sp">'+notes+home+'</div></div>';
+    '<div class="sp">'+notes+back+'</div></div>';
 }
 
 /* ---------- views ---------- */
 function view(){
   var n=S.screen.name;
-  if(n==='home') return viewHome();
+  if(n==='course') return viewCourse();
+  if(n==='subject') return viewSubject();
+  if(n==='chapterlist') return viewChapterList();
   if(n==='chapter') return viewChapter();
   if(n==='index') return viewIndex();
   if(n==='psetup') return viewPSetup();
@@ -276,22 +333,36 @@ function view(){
   if(n==='notes') return viewNotes();
   return '';
 }
-function viewHome(){
-  var subs=S.subjects.map(su=>{
-    var on=S.screen.subject===su.id;
-    return '<button class="tile" data-act="subject" data-id="'+su.id+'"'+(on?' style="border-color:var(--primary);background:var(--primary-soft)"':'')+
-      '><h3>'+esc(su.name)+'</h3><p>'+esc(su.prefix?('NEET · JEE'):'')+'</p></button>';
-  }).join('');
+function courseBlurb(id){
+  if(id==='neet') return 'Physics · Chemistry · Biology';
+  if(id==='jee') return 'Physics · Chemistry · Mathematics';
+  return '';
+}
+function viewCourse(){
+  var cards=S.courses.map(c=>
+    '<button class="tile" data-act="course" data-id="'+c.id+'"><h3>'+esc(c.name)+'</h3><p>'+esc(courseBlurb(c.id))+'</p></button>'
+  ).join('');
+  return '<div class="kick">Student app · live</div><h1>Which exam are you preparing for?</h1>'+
+    '<p class="muted">Choose your course to see the right subjects and chapters. You can switch anytime with Back.</p><div class="spacer"></div>'+
+    '<div class="grid g2">'+cards+'</div>';
+}
+function viewSubject(){
+  var subs=S.subjects.map(su=>
+    '<button class="tile" data-act="subject" data-id="'+su.id+'"><h3>'+esc(su.name)+'</h3><p>Tap to see chapters</p></button>'
+  ).join('') || '<div class="card muted">No subjects yet for this course.</div>';
+  return '<div class="kick">'+esc(S.courseName)+'</div><h1>Which subject?</h1>'+
+    '<p class="muted">Pick a subject to open its chapters.</p><div class="spacer"></div>'+
+    '<div class="grid g2">'+subs+'</div>';
+}
+function viewChapterList(){
   var chaps=S.chapters.map(c=>{
     var has=c.indexCount>0;
     return '<button class="tile" '+(has?'data-act="chapter" data-id="'+c.id+'"':'disabled')+'>'+
       '<h3>'+esc(c.name)+'</h3><p>'+(has?(c.indexCount+' index questions · '+c.bankCount+' in question bank'):'Content being added')+'</p>'+
       (has?'':'<div class="meta">Coming soon</div>')+'</button>';
-  }).join('');
-  return '<div class="kick">Student app · live</div><h1>What are we mastering today?</h1>'+
-    '<p class="muted">Pick a subject, then a chapter. Every chapter opens with its Index Questions.</p><div class="spacer"></div>'+
-    '<div class="grid g2">'+subs+'</div><div class="spacer"></div>'+
-    '<h2>'+esc(subName(S.screen.subject))+' — chapters</h2><div class="spacer"></div><div class="grid">'+chaps+'</div>';
+  }).join('') || '<div class="card muted">No chapters yet for this subject — your teachers are adding them.</div>';
+  return '<div class="kick">'+esc(S.courseName)+' · '+esc(S.subjectName)+'</div><h1>'+esc(S.subjectName)+' — chapters</h1>'+
+    '<p class="muted">Every chapter opens with its Index Questions.</p><div class="spacer"></div><div class="grid">'+chaps+'</div>';
 }
 function viewChapter(){
   var c=S.chapter, pr=S.progress;
@@ -300,7 +371,7 @@ function viewChapter(){
   function locked(icon,t,d){return '<div class="sec locked"><div class="ic">'+icon+'</div><div style="flex:1"><h3>'+t+'</h3><p>'+d+'</p></div><div class="act"><span class="lockmsg">🔒 Finish Index first</span></div></div>';}
   var practice=done?'<div class="sec"><div class="ic">📚</div><div style="flex:1"><h3>Practice</h3><p>Custom practice by topic, or the AI Practice Book that targets your weak areas. No timer.</p></div><div class="act"><button class="btn primary" data-act="psetup" data-id="'+c.id+'">Open</button></div></div>':locked('📚','Practice','Custom practice by topic, or the AI Practice Book that targets your weak areas.');
   var exam=done?'<div class="sec"><div class="ic">📝</div><div style="flex:1"><h3>Exam</h3><p>Choose how many questions; a timed exam is generated from this chapter.</p></div><div class="act"><button class="btn primary" data-act="esetup" data-id="'+c.id+'">Open</button></div></div>':locked('📝','Exam','Choose how many questions; a timed exam is generated from this chapter.');
-  return '<div class="kick">'+esc(subName(c.subjectId))+'</div><h1>'+esc(c.name)+'</h1>'+
+  return '<div class="kick">'+esc(S.subjectName||subName(c.subjectId))+'</div><h1>'+esc(c.name)+'</h1>'+
     '<p class="muted">Complete the Index Questions to unlock Practice and Exam.</p><div class="spacer"></div><div class="grid">'+
     '<div class="sec"><div class="ic">🎯</div><div style="flex:1"><h3>Index Questions'+(done?' <span class="pill g">Completed</span>':'')+'</h3>'+
       '<p>The '+ni+' canonical questions that define this chapter. Mandatory — unlocks the rest.</p>'+
@@ -480,8 +551,9 @@ document.addEventListener('click', async e=>{
     if(act==='playvid'){ var v=el.closest('.video'); if(v) v.classList.toggle('on'); return; }
     if(act==='lightbox'){ openLightbox(el.getAttribute('data-url'), el.getAttribute('data-kind')); return; }
     if(act==='closelb'){ closeLightbox(); return; }
-    if(act==='home'){ await goHome(); }
-    else if(act==='subject'){ await goHome(id); }
+    if(act==='back'){ goBack(); return; }
+    else if(act==='course'){ await goSubjects(id); }
+    else if(act==='subject'){ await goChapterList(id); }
     else if(act==='chapter'){ await goChapter(id); }
     else if(act==='notes'){ await goNotes(); }
     else if(act==='startindex'){ await goIndex(id); }
@@ -544,8 +616,12 @@ async function submitExam(){
 
 /* boot */
 (async () => {
-  try { await goHome('phy'); }
+  try {
+    RESTORING=true; await goCourseSelect(); RESTORING=false;
+    history.replaceState({name:'course'}, '');   // entry point — Back from here exits the app
+  }
   catch (e) {
+    RESTORING=false;
     $app().innerHTML = '<div class="loading" style="line-height:1.7">'+
       '<b style="color:var(--ink)">Can’t reach the backend.</b><br>'+
       'This is the <b>wired</b> student app — it needs the server running.<br><br>'+

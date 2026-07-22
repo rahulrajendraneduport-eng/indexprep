@@ -80,7 +80,10 @@ const routes = [];
 const on = (method, pattern, handler) => routes.push({ method, parts: pattern.split('/').filter(Boolean), handler });
 
 /* CONTENT (read) */
-on('GET', '/api/subjects', () => all('SELECT * FROM subjects'));
+on('GET', '/api/courses', () => all('SELECT * FROM courses ORDER BY ord'));
+on('GET', '/api/subjects', (p, q) => q.course
+  ? all('SELECT * FROM subjects WHERE course_id=? ORDER BY ord', q.course)
+  : all('SELECT * FROM subjects ORDER BY ord'));
 on('GET', '/api/chapters', async (p, q) => {
   const rows = q.subject ? await all('SELECT * FROM chapters WHERE subject_id=? ORDER BY ord', q.subject) : await all('SELECT * FROM chapters ORDER BY ord');
   const out = [];
@@ -188,6 +191,21 @@ on('POST', '/api/upload', async (p, q, body) => {
   const id = 'u' + Date.now() + '-' + (uploadSeq++) + (ext || '');
   await run('INSERT INTO uploads(id,name,mime,file_type,data) VALUES(?,?,?,?,?)', id, name, type, fileType, String(body.dataBase64 || ''));
   return { url: '/uploads/' + id, fileName: name, fileType };
+});
+
+/* SME — create a chapter (course + subject scoped) */
+on('POST', '/api/chapters', async (p, q, body) => {
+  const subjectId = String(body.subjectId || '');
+  const subj = await get('SELECT * FROM subjects WHERE id=?', subjectId);
+  if (!subj) return { error: 'Unknown subject' };
+  const name = String(body.name || '').trim();
+  if (!name) return { error: 'Chapter name required' };
+  const ord = 1 + await cnt('SELECT CAST(COUNT(*) AS INTEGER) AS c FROM chapters WHERE subject_id=?', subjectId);
+  let base = (subj.course_id + '-' + name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'chapter';
+  let id = base, i = 2;
+  while (await get('SELECT 1 AS x FROM chapters WHERE id=?', id)) { id = base + '-' + i; i++; }
+  await run('INSERT INTO chapters(id,subject_id,name,ord) VALUES(?,?,?,?)', id, subjectId, name, ord);
+  return { id, subjectId, name };
 });
 
 /* SME — create a topic */

@@ -1,5 +1,5 @@
 'use strict';
-/* PostgreSQL backend (production on Render). Same async interface as db-sqlite.
+/* PostgreSQL backend (production on Render/Supabase). Same async interface as db-sqlite.
    Converts "?" placeholders to Postgres "$1, $2, …" so the server code is shared. */
 const { Pool } = require('pg');
 
@@ -8,8 +8,11 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+const SCHEMA_VERSION = '2';   // bump to force a rebuild of the schema (course-first model)
+
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, name TEXT NOT NULL, prefix TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY, name TEXT NOT NULL, ord INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, course_id TEXT NOT NULL, name TEXT NOT NULL, prefix TEXT NOT NULL, ord INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS chapters (id TEXT PRIMARY KEY, subject_id TEXT NOT NULL, name TEXT NOT NULL, ord INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS topics (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, name TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS index_questions (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, topic_id TEXT NOT NULL,
@@ -36,8 +39,26 @@ CREATE TABLE IF NOT EXISTS uploads (id TEXT PRIMARY KEY, name TEXT, mime TEXT, f
   created_at TIMESTAMP DEFAULT now());
 `;
 
+const DROP_ALL = `
+DROP TABLE IF EXISTS uploads; DROP TABLE IF EXISTS notes; DROP TABLE IF EXISTS chapter_progress;
+DROP TABLE IF EXISTS attempts; DROP TABLE IF EXISTS students; DROP TABLE IF EXISTS question_media;
+DROP TABLE IF EXISTS question_index_map; DROP TABLE IF EXISTS bank_questions; DROP TABLE IF EXISTS index_questions;
+DROP TABLE IF EXISTS topics; DROP TABLE IF EXISTS chapters; DROP TABLE IF EXISTS subjects; DROP TABLE IF EXISTS courses;
+`;
+
 function conv(sql) { let i = 0; return sql.replace(/\?/g, () => '$' + (++i)); }
-async function init() { await pool.query(SCHEMA); }
+async function init() {
+  await pool.query('CREATE TABLE IF NOT EXISTS schema_meta (k TEXT PRIMARY KEY, v TEXT)');
+  const r = await pool.query('SELECT v FROM schema_meta WHERE k=$1', ['version']);
+  const cur = r.rows[0] ? r.rows[0].v : null;
+  if (cur !== SCHEMA_VERSION) {
+    await pool.query(DROP_ALL);
+    await pool.query(SCHEMA);
+    await pool.query("INSERT INTO schema_meta(k,v) VALUES('version',$1) ON CONFLICT(k) DO UPDATE SET v=excluded.v", [SCHEMA_VERSION]);
+  } else {
+    await pool.query(SCHEMA);
+  }
+}
 async function all(sql, ...p) { const r = await pool.query(conv(sql), p); return r.rows; }
 async function get(sql, ...p) { const r = await pool.query(conv(sql), p); return r.rows[0]; }
 async function run(sql, ...p) { return pool.query(conv(sql), p); }

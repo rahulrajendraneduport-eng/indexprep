@@ -7,8 +7,11 @@ const path = require('path');
 const DB_PATH = process.env.INDEXPREP_DB || path.join(__dirname, 'indexprep.db');
 const db = new DatabaseSync(DB_PATH);
 
+const SCHEMA_VERSION = '2';   // bump to force a rebuild of the schema (course-first model)
+
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, name TEXT NOT NULL, prefix TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS courses (id TEXT PRIMARY KEY, name TEXT NOT NULL, ord INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, course_id TEXT NOT NULL, name TEXT NOT NULL, prefix TEXT NOT NULL, ord INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS chapters (id TEXT PRIMARY KEY, subject_id TEXT NOT NULL, name TEXT NOT NULL, ord INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS topics (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, name TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS index_questions (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, topic_id TEXT NOT NULL,
@@ -35,7 +38,24 @@ CREATE TABLE IF NOT EXISTS uploads (id TEXT PRIMARY KEY, name TEXT, mime TEXT, f
   created_at TEXT DEFAULT (datetime('now')));
 `;
 
-async function init() { db.exec(SCHEMA); }
+const DROP_ALL = `
+DROP TABLE IF EXISTS uploads; DROP TABLE IF EXISTS notes; DROP TABLE IF EXISTS chapter_progress;
+DROP TABLE IF EXISTS attempts; DROP TABLE IF EXISTS students; DROP TABLE IF EXISTS question_media;
+DROP TABLE IF EXISTS question_index_map; DROP TABLE IF EXISTS bank_questions; DROP TABLE IF EXISTS index_questions;
+DROP TABLE IF EXISTS topics; DROP TABLE IF EXISTS chapters; DROP TABLE IF EXISTS subjects; DROP TABLE IF EXISTS courses;
+`;
+
+async function init() {
+  db.exec('CREATE TABLE IF NOT EXISTS schema_meta (k TEXT PRIMARY KEY, v TEXT);');
+  const row = db.prepare('SELECT v FROM schema_meta WHERE k=?').get('version');
+  if (!row || row.v !== SCHEMA_VERSION) {
+    db.exec(DROP_ALL);
+    db.exec(SCHEMA);
+    db.prepare('INSERT INTO schema_meta(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').run('version', SCHEMA_VERSION);
+  } else {
+    db.exec(SCHEMA);
+  }
+}
 async function all(sql, ...p) { return db.prepare(sql).all(...p); }
 async function get(sql, ...p) { return db.prepare(sql).get(...p); }
 async function run(sql, ...p) { return db.prepare(sql).run(...p); }
