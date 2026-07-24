@@ -162,6 +162,14 @@ on('POST', '/api/progress/complete-index', async (p, q, body) => {
   return { ok: true, unlocked: true };
 });
 
+/* STUDENT — last result per index question (for the question palette) */
+on('GET', '/api/index-status/:studentId/:chapterId', async p => {
+  const rows = await all("SELECT question_id, is_correct FROM attempts WHERE student_id=? AND chapter_id=? AND section='index' ORDER BY id", p.studentId, p.chapterId);
+  const last = {};
+  rows.forEach(r => { last[r.question_id] = !!r.is_correct; });   // ORDER BY id → last write wins
+  return last;
+});
+
 /* STUDENT — notes + weak areas */
 on('GET', '/api/notes/:studentId', async p =>
   (await all('SELECT * FROM notes WHERE student_id=? ORDER BY created_at DESC', p.studentId)).map(n => ({

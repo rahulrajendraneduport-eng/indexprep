@@ -156,6 +156,35 @@
   .lb img,.lb video{max-width:92vw;max-height:88vh;display:block}
   .lb iframe{width:90vw;height:86vh;border:0;background:#fff}
   .lb .x{position:fixed;top:16px;right:22px;color:#fff;font-size:28px;cursor:pointer;font-weight:700;line-height:1}
+  /* index screen: question + right-side palette */
+  .idxwrap{display:flex;gap:20px;align-items:flex-start}
+  .idxmain{flex:1;min-width:0}
+  .idxpal{width:160px;flex:none}
+  .palcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);position:sticky;top:72px}
+  .palcard .ph{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .paldots{display:flex;flex-wrap:wrap;gap:8px}
+  .pd{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line-strong);background:var(--surface);font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);font:inherit}
+  .pd:hover{border-color:var(--primary)}
+  .pd.correct{background:var(--green-soft);border-color:var(--green);color:#0f7a37}
+  .pd.wrong{background:var(--red-soft);border-color:var(--red);color:#a3341f}
+  .pd.cur{outline:2px solid var(--primary);outline-offset:1px}
+  .pallegend{margin-top:13px;display:flex;flex-direction:column;gap:6px}
+  .pallegend span{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}
+  .pallegend i.lg{width:12px;height:12px;border-radius:4px;border:1.5px solid var(--line-strong);display:inline-block;flex:none}
+  .pallegend i.ok{background:var(--green-soft);border-color:var(--green)}
+  .pallegend i.no{background:var(--red-soft);border-color:var(--red)}
+  .pallegend i.un{background:var(--surface)}
+  @media(max-width:720px){ .idxwrap{flex-direction:column-reverse} .idxpal{width:100%} .palcard{position:static} }
+  /* reordered index feedback stack */
+  .fbtopic{font-size:13.5px;color:var(--muted);margin-bottom:2px}
+  .fbtopic b{color:var(--primary-ink)}
+  .fbsec{margin-top:16px}
+  .fbh{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-ink);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .fbsec .sol{font-size:13.5px;color:var(--ink);line-height:1.55}
+  .fbsec ul.kp{margin:0;padding-left:18px}
+  .fbsec ul.kp li{font-size:13px;margin:5px 0;color:var(--ink)}
+  .fbsec .tip{font-size:13px;color:var(--ink);background:var(--amber-soft);border:1px dashed var(--amber);border-radius:12px;padding:11px 13px}
+  .fbsec .tip .src{font-size:10px;font-weight:700;color:var(--muted);margin-left:6px}
 </style>
 </head>
 <body>
@@ -177,7 +206,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 
 const S = { screen:{name:'course'}, courses:[], course:null, courseName:'', subject:null, subjectName:'',
   subjects:[], chapters:[], notes:[],
-  chapter:null, progress:null, indexQs:[], ii:0, sel:null, submitted:false, result:null,
+  chapter:null, progress:null, indexQs:[], indexStatus:{}, ii:0, sel:null, submitted:false, result:null,
   bank:[], topics:[], weak:[], mode:'custom', topicsSel:[], qi:0,
   examQs:[], examAns:{}, cur:0, secs:0, _timer:null, examResult:null };
 
@@ -259,6 +288,8 @@ async function goChapter(chapterId){
 async function goIndex(chapterId){
   loading();
   S.indexQs = await api('/chapters/'+chapterId+'/index-questions');
+  S.topics = await api('/chapters/'+chapterId+'/topics');
+  try{ S.indexStatus = await api('/index-status/'+SID+'/'+chapterId); }catch(e){ S.indexStatus={}; }
   S.ii=0; S.sel=null; S.submitted=false; S.result=null;
   S.screen={name:'index',chapterId};
   render(); window.scrollTo(0,0); pushScreen();
@@ -393,34 +424,33 @@ function optionButtons(q){
     return '<button class="'+cls+'" '+(S.submitted?'disabled':'data-act="sel" data-key="'+k+'"')+'><span class="k">'+k+'</span> '+esc(o[1])+tick+'</button>';
   }).join('');
 }
-function indexLearningHTML(fb, correct){
-  var html='';
-  if(fb.keyPoints && fb.keyPoints.length){
-    html+='<div class="remember"><div class="rh">◎ Key things to remember</div><ul>'+fb.keyPoints.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul></div>';
-  }
-  html+=mediaHtml(fb.media||{});
-  if(!correct && fb.note){
-    html+='<div class="noteadd"><div class="nh">📌 Saved to your notes <span class="src">'+(fb.noteSource==='SME'?'SME note':'AI note')+'</span></div><div class="ntxt">'+esc(fb.note)+'</div></div>';
-  }
-  return html;
+function fbSection(title, body){ return body ? '<div class="fbsec"><div class="fbh">'+title+'</div>'+body+'</div>' : ''; }
+function flashHtml(fc){
+  if(!fc) return '';
+  if(fc.fileUrl && (fc.fileType==='jpeg'||fc.fileType==='png'))
+    return '<div class="flashimg"><div class="cap"><span class="tag">Flashcard</span> tap image to enlarge</div><img src="'+fc.fileUrl+'" class="fcimg" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="image"></div>';
+  if(fc.fileUrl && fc.fileType==='pdf')
+    return '<div class="flash"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.fileName||'PDF flashcard')+' <button type="button" class="btn" style="margin-left:auto;padding:4px 10px;font-size:12px" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="pdf">Open PDF ↗</button></div></div>';
+  if(fc.front)
+    return '<div class="flash" data-act="flip"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.front)+' <span class="hint">tap to reveal ▾</span></div><div class="fback">'+esc(fc.back||'')+'</div></div>';
+  return '';
 }
-function mediaHtml(m){
-  var ex='';
-  if(m.flashcard){
-    var fc=m.flashcard;
-    if(fc.fileUrl && (fc.fileType==='jpeg'||fc.fileType==='png')){
-      ex+='<div class="flashimg"><div class="cap"><span class="tag">Flashcard</span> tap image to enlarge</div><img src="'+fc.fileUrl+'" class="fcimg" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="image"></div>';
-    } else if(fc.fileUrl && fc.fileType==='pdf'){
-      ex+='<div class="flash"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.fileName||'PDF flashcard')+' <button type="button" class="btn" style="margin-left:auto;padding:4px 10px;font-size:12px" data-act="lightbox" data-url="'+fc.fileUrl+'" data-kind="pdf">Open PDF ↗</button></div></div>';
-    } else if(fc.front){
-      ex+='<div class="flash" data-act="flip"><div class="ffront"><span class="tag">Flashcard</span> '+esc(fc.front)+' <span class="hint">tap to reveal ▾</span></div><div class="fback">'+esc(fc.back||'')+'</div></div>';
-    }
-  }
-  if(m.video){
-    if(m.video.fileUrl) ex+='<div class="video"><video src="'+m.video.fileUrl+'" class="vidplayer" controls preload="metadata"></video></div>';
-    else ex+='<div class="video"><button class="vthumb" data-act="playvid"><span class="playbtn">▶</span><span class="vmeta"><b>'+esc(m.video.title||'Video explanation')+'</b><span>'+esc(m.video.duration||'')+' · added by SME</span></span></button><div class="vplayer"><div class="frame">▶</div>Video explanation uploaded in the SME dashboard would play here.</div></div>';
-  }
-  return ex?('<div class="explain"><div class="eh">📖 Detailed explanation</div>'+ex+'</div>'):'';
+function videoHtml(v){
+  if(!v) return '';
+  if(v.fileUrl) return '<div class="video"><video src="'+v.fileUrl+'" class="vidplayer" controls preload="metadata"></video></div>';
+  return '<div class="video"><button class="vthumb" data-act="playvid"><span class="playbtn">▶</span><span class="vmeta"><b>'+esc(v.title||'Video explanation')+'</b><span>'+esc(v.duration||'')+' · added by SME</span></span></button><div class="vplayer"><div class="frame">▶</div>Video explanation uploaded in the SME dashboard would play here.</div></div>';
+}
+/* reordered index-question feedback (same for correct & incorrect) */
+function indexFeedback(q, r){
+  var fb=r.feedback||{}, m=fb.media||{}, correct=r.correct, h='';
+  var tn = q.topicId ? topicName(q.topicId) : '';
+  if(tn && tn!==q.topicId) h+='<div class="fbtopic">This question is from the topic <b>'+esc(tn)+'</b></div>';
+  h+=fbSection('📘 Detailed explanation', r.solution ? '<div class="sol">'+esc(r.solution)+'</div>' : '');
+  h+=fbSection('🎬 Explanation video', videoHtml(m.video));
+  h+=fbSection('🗒️ Notes: key things to remember', (fb.keyPoints&&fb.keyPoints.length) ? '<ul class="kp">'+fb.keyPoints.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul>' : '');
+  h+=fbSection('🃏 Flashcard', flashHtml(m.flashcard));
+  h+=fbSection('💡 Tips', fb.note ? '<div class="tip">'+esc(fb.note)+(correct?'':' <span class="src">'+(fb.noteSource==='SME'?'SME':'AI')+' · saved to your Notes</span>')+'</div>' : '');
+  return h;
 }
 function openLightbox(url,kind){
   var lb=document.getElementById('lb'), inner='';
@@ -450,8 +480,9 @@ function questionBlock(q, type){
     html+='<div style="margin-top:18px"><button class="btn primary" '+(S.sel==null?'disabled':'')+' data-act="check">Check answer</button></div>';
   } else if(S.result){
     var r=S.result, correct=r.correct;
-    html+='<div class="fb '+(correct?'ok':'no')+'"><div class="hd">'+(correct?'✓ Correct':'✗ Not quite')+'</div><div class="bd"><div class="sol">'+esc(r.solution)+'</div>';
-    html+= type==='index' ? indexLearningHTML(r.feedback||{}, correct) : bankFeedbackHTML(r.feedback||{}, correct);
+    html+='<div class="fb '+(correct?'ok':'no')+'"><div class="hd">'+(correct?'✓ Correct':'✗ Not quite')+'</div><div class="bd">';
+    if(type==='index'){ html+=indexFeedback(q, r); }
+    else { html+='<div class="sol">'+esc(r.solution)+'</div>'+bankFeedbackHTML(r.feedback||{}, correct); }
     html+='</div></div>';
   }
   return html+'</div>';
@@ -460,10 +491,18 @@ function questionBlock(q, type){
 function viewIndex(){
   var list=S.indexQs, q=list[S.ii], last=S.ii===list.length-1;
   var frac=((S.ii+(S.submitted?1:0))/list.length*100);
-  var nextBtn=S.submitted?'<div style="max-width:640px;margin:18px auto 0"><button class="btn primary" data-act="nextindex" data-last="'+(last?1:0)+'">'+(last?'Finish & unlock chapter →':'Next index question →')+'</button></div>':'';
-  return '<div class="qmeta" style="justify-content:space-between"><span class="kick" style="margin:0">Index Questions · '+(S.ii+1)+' of '+list.length+'</span></div>'+
+  var nextBtn=S.submitted?'<div style="margin:18px 0 0"><button class="btn primary" data-act="nextindex" data-last="'+(last?1:0)+'">'+(last?'Finish & unlock chapter →':'Next index question →')+'</button></div>':'';
+  var dots=list.map((qq,idx)=>{
+    var st=S.indexStatus?S.indexStatus[qq.id]:undefined;
+    var cls='pd'+(st===true?' correct':st===false?' wrong':'')+(idx===S.ii?' cur':'');
+    return '<button class="'+cls+'" data-act="gotoindex" data-idx="'+idx+'" title="Question '+(idx+1)+'">'+(idx+1)+'</button>';
+  }).join('');
+  var palette='<div class="idxpal"><div class="palcard"><div class="ph">All index questions</div><div class="paldots">'+dots+'</div>'+
+    '<div class="pallegend"><span><i class="lg ok"></i>Answered right</span><span><i class="lg no"></i>Answered wrong</span><span><i class="lg un"></i>Not attempted</span></div></div></div>';
+  var main='<div class="idxmain"><div class="qmeta" style="justify-content:space-between"><span class="kick" style="margin:0">Index Questions · '+(S.ii+1)+' of '+list.length+'</span></div>'+
     '<div class="progbar" style="margin-bottom:20px"><span style="width:'+frac+'%"></span></div>'+
-    '<div class="card">'+questionBlock(q,'index')+nextBtn+'</div>';
+    '<div class="card">'+questionBlock(q,'index')+nextBtn+'</div></div>';
+  return '<div class="idxwrap">'+main+palette+'</div>';
 }
 function viewPSetup(){
   var c=S.screen.chapterId;
@@ -557,6 +596,7 @@ document.addEventListener('click', async e=>{
     else if(act==='chapter'){ await goChapter(id); }
     else if(act==='notes'){ await goNotes(); }
     else if(act==='startindex'){ await goIndex(id); }
+    else if(act==='gotoindex'){ S.ii=+el.getAttribute('data-idx'); S.sel=null; S.submitted=false; S.result=null; render(); window.scrollTo(0,0); }
     else if(act==='sel'){ S.sel=el.getAttribute('data-key'); render(); }
     else if(act==='check'){ await doCheck(); }
     else if(act==='nextindex'){ await doNextIndex(el.getAttribute('data-last')==='1'); }
@@ -585,7 +625,7 @@ async function doCheck(){
   var section = S.screen.name==='index' ? 'index' : 'practice';
   S.result = await api('/attempts','POST',{studentId:SID, questionId:q.id, questionType:type, section, chapterId:S.screen.chapterId, chosenKey:S.sel});
   S.submitted=true;
-  if(type==='index' && !S.result.correct) await refreshNotes();
+  if(type==='index'){ S.indexStatus=S.indexStatus||{}; S.indexStatus[q.id]=!!S.result.correct; if(!S.result.correct) await refreshNotes(); }
   render();
 }
 async function doNextIndex(last){
