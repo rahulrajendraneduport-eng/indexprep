@@ -185,11 +185,33 @@
   .fbsec ul.kp li{font-size:13px;margin:5px 0;color:var(--ink)}
   .fbsec .tip{font-size:13px;color:var(--ink);background:var(--amber-soft);border:1px dashed var(--amber);border-radius:12px;padding:11px 13px}
   .fbsec .tip .src{font-size:10px;font-weight:700;color:var(--muted);margin-left:6px}
+  /* collapsible Notes (practice, correct answer) */
+  .notestoggle{display:flex;align-items:center;justify-content:space-between;width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 13px;font:inherit;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--primary-ink);cursor:pointer}
+  .notestoggle .chev{font-size:11px;color:var(--muted);font-weight:700}
+  .notesbody{max-height:0;overflow:hidden;transition:max-height .22s ease}
+  .fbsec.open .notesbody{max-height:600px}
+  .fbsec.open .notesbody ul.kp{margin-top:11px}
+  /* clickable index-mapping cards (practice, wrong answer) */
+  .idxcard.clickable{cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit;transition:.12s}
+  .idxcard.clickable:hover{border-color:var(--primary);box-shadow:0 2px 10px rgba(79,70,229,.12)}
+  .idxcard .open{font-size:11.5px;color:var(--primary-ink);font-weight:700;margin-top:7px}
+  .ixchip{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;white-space:nowrap}
+  .ixchip.ok{background:var(--green-soft);color:#0f7a37}
+  .ixchip.no{background:var(--red-soft);color:#a3341f}
+  /* index-question review pop-up */
+  .rm{position:fixed;inset:0;background:rgba(10,15,30,.55);display:none;align-items:flex-start;justify-content:center;z-index:120;padding:26px 14px;overflow:auto;-webkit-overflow-scrolling:touch}
+  .rm.on{display:flex}
+  .rmbox{background:var(--surface);border-radius:var(--r);max-width:660px;width:100%;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.4);margin:auto}
+  .rmhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .rmx{margin-left:auto;border:1px solid var(--line-strong);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);font:inherit}
+  .rmx:hover{border-color:var(--red);color:var(--red)}
+  .rmbox .opt{cursor:default}
 </style>
 </head>
 <body>
 <div class="app" id="app"><div class="loading">Loading…</div></div>
 <div class="lb" id="lb"></div>
+<div class="rm" id="reviewModal"></div>
 
 <script>
 /* ============================================================
@@ -441,9 +463,9 @@ function videoHtml(v){
   return '<div class="video"><button class="vthumb" data-act="playvid"><span class="playbtn">▶</span><span class="vmeta"><b>'+esc(v.title||'Video explanation')+'</b><span>'+esc(v.duration||'')+' · added by SME</span></span></button><div class="vplayer"><div class="frame">▶</div>Video explanation uploaded in the SME dashboard would play here.</div></div>';
 }
 /* reordered index-question feedback (same for correct & incorrect) */
-function indexFeedback(q, r){
+function indexFeedback(q, r, tnOverride){
   var fb=r.feedback||{}, m=fb.media||{}, correct=r.correct, h='';
-  var tn = q.topicId ? topicName(q.topicId) : '';
+  var tn = tnOverride!=null ? tnOverride : (q.topicId ? topicName(q.topicId) : '');
   if(tn && tn!==q.topicId) h+='<div class="fbtopic">This question is from the topic <b>'+esc(tn)+'</b></div>';
   h+=fbSection('📘 Detailed explanation', r.solution ? '<div class="sol">'+esc(r.solution)+'</div>' : '');
   h+=fbSection('🎬 Explanation video', videoHtml(m.video));
@@ -462,16 +484,51 @@ function openLightbox(url,kind){
 }
 function closeLightbox(){ var lb=document.getElementById('lb'); lb.classList.remove('on'); lb.innerHTML=''; }
 document.getElementById('lb').addEventListener('click',e=>{ if(e.target.id==='lb') closeLightbox(); });
-function bankFeedbackHTML(fb, correct){
-  var mapped=fb.mappedIndex||[];
-  if(!correct && mapped.length>0){
-    var cards=mapped.map(m=>'<div class="idxcard"><div class="c">Index '+m.id+' · '+esc(m.concept)+'</div><div class="s">'+esc(m.stem)+'</div>'+(m.correctText?'<div class="cc">Answer: '+esc(m.correctText)+'</div>':'')+'</div>').join('');
-    var corr=mapped.length>1?'This question is a combination of two concepts you already mastered — a permutation, not a new type.':'Same core concept, new numbers. You’ve solved this type before — recall the index question and the method follows.';
-    return '<div class="idxlink"><div class="lk"><span class="sp">✦</span> This maps to '+(mapped.length>1?'index questions you’ve already done':'an index question you’ve already done')+'</div>'+cards+'<div class="corr">'+corr+'</div></div>';
-  }
-  if(!correct){ return '<div class="corr">No index-question link for this one — just review the solution above.</div>'; }
-  return '';
+function notesCollapsible(kp){
+  if(!kp || !kp.length) return '';
+  return '<div class="fbsec"><button class="notestoggle" data-act="togglenotes"><span>🗒️ Notes</span><span class="chev">Show ▾</span></button>'+
+    '<div class="notesbody"><ul class="kp">'+kp.map(p=>'<li>'+esc(p)+'</li>').join('')+'</ul></div></div>';
 }
+function bankFeedbackHTML(fb, correct){
+  // CORRECT → optional collapsible Notes only
+  if(correct){ return notesCollapsible(fb.keyPoints); }
+  // WRONG → index-mapping section (each index card opens the review pop-up)
+  var mapped=fb.mappedIndex||[];
+  if(mapped.length>0){
+    var allGreen=mapped.every(m=>m.lastCorrect===true);
+    var header=allGreen
+      ? 'This question maps to the Index Question'+(mapped.length>1?'s':'')+' that you have already done and made correct'
+      : 'This question maps to the Index Question'+(mapped.length>1?'s':'')+' that you have already done';
+    var cards=mapped.map(m=>{
+      var chip=m.lastCorrect===true?'<span class="ixchip ok">✓ you got this right</span>'
+             :m.lastCorrect===false?'<span class="ixchip no">✗ you missed this</span>':'';
+      return '<button class="idxcard clickable" data-act="openindex" data-id="'+esc(m.id)+'">'+
+        '<div class="c">Index '+esc(m.id)+' · '+esc(m.concept)+chip+'</div>'+
+        '<div class="s">'+esc(m.stem)+'</div>'+
+        '<div class="open">Tap to review this index question ↗</div></button>';
+    }).join('');
+    return '<div class="idxlink"><div class="lk"><span class="sp">✦</span> '+esc(header)+'</div>'+cards+'</div>';
+  }
+  return '<div class="corr">No index-question link for this one — just review the solution above.</div>';
+}
+/* index-question review pop-up (opened from a Practice wrong answer) */
+async function openIndexReview(id){
+  var mo=document.getElementById('reviewModal');
+  mo.innerHTML='<div class="rmbox"><div class="loading">Loading…</div></div>'; mo.classList.add('on');
+  try{
+    var d=await api('/index-review/'+id);
+    var opts=d.options.map(o=>{
+      var isC=o[0]===d.correctKey;
+      return '<div class="opt'+(isC?' correct':'')+'"><span class="k">'+o[0]+'</span> '+esc(o[1])+(isC?'<span class="tick">✓</span>':'')+'</div>';
+    }).join('');
+    var q={topicId:d.topicId}, r={correct:true, solution:d.solution, feedback:{keyPoints:d.keyPoints, note:d.note, noteSource:d.noteSource, media:d.media}};
+    mo.innerHTML='<div class="rmbox"><div class="rmhead"><span class="pill gray">Index '+esc(d.id)+'</span><span class="pill">'+esc(d.topicName||d.concept||'')+'</span><button class="rmx" data-act="closereview">✕ Close</button></div>'+
+      '<div class="qstem" style="margin-top:12px">'+esc(d.stem)+'</div><div class="opts" style="margin-top:14px">'+opts+'</div>'+
+      '<div class="fb ok" style="margin-top:16px"><div class="hd">Index question · review</div><div class="bd">'+indexFeedback(q, r, d.topicName)+'</div></div></div>';
+  }catch(e){ mo.innerHTML='<div class="rmbox"><div class="loading">Couldn’t load this index question.<br><button class="btn" data-act="closereview" style="margin-top:12px">Close</button></div></div>'; }
+}
+function closeIndexReview(){ var mo=document.getElementById('reviewModal'); mo.classList.remove('on'); mo.innerHTML=''; }
+document.getElementById('reviewModal').addEventListener('click',e=>{ if(e.target.id==='reviewModal') closeIndexReview(); });
 function questionBlock(q, type){
   var meta='<span class="pill gray">'+(type==='index'?('Index '+q.id):'Practice')+'</span>';
   (q.topics||(q.topicId?[q.topicId]:[])).forEach(t=>{meta+='<span class="pill">'+esc(topicName(t))+'</span>';});
@@ -482,7 +539,7 @@ function questionBlock(q, type){
     var r=S.result, correct=r.correct;
     html+='<div class="fb '+(correct?'ok':'no')+'"><div class="hd">'+(correct?'✓ Correct':'✗ Not quite')+'</div><div class="bd">';
     if(type==='index'){ html+=indexFeedback(q, r); }
-    else { html+='<div class="sol">'+esc(r.solution)+'</div>'+bankFeedbackHTML(r.feedback||{}, correct); }
+    else { html+=fbSection('📘 Detailed explanation','<div class="sol">'+esc(r.solution)+'</div>')+bankFeedbackHTML(r.feedback||{}, correct); }
     html+='</div></div>';
   }
   return html+'</div>';
@@ -590,6 +647,9 @@ document.addEventListener('click', async e=>{
     if(act==='playvid'){ var v=el.closest('.video'); if(v) v.classList.toggle('on'); return; }
     if(act==='lightbox'){ openLightbox(el.getAttribute('data-url'), el.getAttribute('data-kind')); return; }
     if(act==='closelb'){ closeLightbox(); return; }
+    if(act==='openindex'){ await openIndexReview(el.getAttribute('data-id')); return; }
+    if(act==='closereview'){ closeIndexReview(); return; }
+    if(act==='togglenotes'){ var sec=el.closest('.fbsec'); if(sec){ sec.classList.toggle('open'); var c=sec.querySelector('.chev'); if(c) c.textContent=sec.classList.contains('open')?'Hide ▴':'Show ▾'; } return; }
     if(act==='back'){ goBack(); return; }
     else if(act==='course'){ await goSubjects(id); }
     else if(act==='subject'){ await goChapterList(id); }

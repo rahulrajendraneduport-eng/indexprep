@@ -49,7 +49,7 @@ async function mapsOf(bid) {
 }
 async function bankRow(r) {
   return { id: r.id, chapterId: r.chapter_id, topics: J(r.topics_json), stem: r.stem, options: J(r.options_json),
-    solution: r.solution, difficulty: r.difficulty, review: r.review_status,
+    solution: r.solution, difficulty: r.difficulty, review: r.review_status, keyPoints: J(r.key_points_json) || [],
     noMatch: !!r.no_match, solutionOnly: !!r.solution_only, maps: await mapsOf(r.id) };
 }
 
@@ -110,6 +110,14 @@ on('GET', '/api/index-questions/:id', async p => {
   const r = await get('SELECT * FROM index_questions WHERE id=?', p.id); if (!r) return null;
   return Object.assign(indexRow(r), { media: await mediaOf(r.id) });
 });
+/* full index question for the review pop-up (includes the correct key — used
+   only from Practice, which is unlocked after every index question is done) */
+on('GET', '/api/index-review/:id', async p => {
+  const r = await get('SELECT * FROM index_questions WHERE id=?', p.id); if (!r) return null;
+  return { id: r.id, topicId: r.topic_id, topicName: (await get('SELECT name FROM topics WHERE id=?', r.topic_id) || {}).name || '',
+    stem: r.stem, options: J(r.options_json), correctKey: r.correct_key, concept: r.concept, solution: r.solution,
+    keyPoints: J(r.key_points_json) || [], note: r.note, noteSource: r.note_source, media: await mediaOf(r.id) };
+});
 
 /* STUDENT — attempt (server decides correctness + builds feedback) */
 on('POST', '/api/attempts', async (p, q, body) => {
@@ -125,10 +133,14 @@ on('POST', '/api/attempts', async (p, q, body) => {
     correctKey = bq.correct_key; solution = bq.solution; topics = J(bq.topics_json);
     const approved = (await mapsOf(bq.id)).filter(m => m.status === 'sme_approved' || m.status === 'manual');
     indexIds = approved.map(m => m.indexId);
-    feedback = { mappedIndex: await Promise.all(approved.map(async m => {
+    const mappedIndex = await Promise.all(approved.map(async m => {
       const iq = await get('SELECT * FROM index_questions WHERE id=?', m.indexId);
-      return { id: iq.id, concept: iq.concept, stem: iq.stem, correctText: (J(iq.options_json).find(o => o[0] === iq.correct_key) || [])[1] };
-    })) };
+      const la = await get("SELECT is_correct FROM attempts WHERE student_id=? AND question_id=? AND section='index' ORDER BY id DESC LIMIT 1", studentId, m.indexId);
+      return { id: iq.id, concept: iq.concept, stem: iq.stem,
+        correctText: (J(iq.options_json).find(o => o[0] === iq.correct_key) || [])[1],
+        lastCorrect: la ? !!la.is_correct : null };   // null = never attempted (shouldn't happen post-unlock)
+    }));
+    feedback = { mappedIndex, keyPoints: J(bq.key_points_json) || [] };
   }
   const isCorrect = chosen === correctKey ? 1 : 0;
   await run('INSERT INTO attempts(student_id,question_id,question_type,section,chapter_id,topics_json,index_ids_json,is_correct,chosen_key) VALUES(?,?,?,?,?,?,?,?,?)',
@@ -254,8 +266,8 @@ on('POST', '/api/bank-questions', async (p, q, body) => {
   const id = 'B' + (num + 1) + '-' + Date.now().toString().slice(-4);
   const suggestions = await matchBank(body.chapterId, body.topics || [], body.stem || '');
   const noMatch = suggestions.length === 0 ? 1 : 0;
-  await run('INSERT INTO bank_questions(id,chapter_id,topics_json,stem,options_json,correct_key,solution,review_status,no_match,solution_only) VALUES(?,?,?,?,?,?,?,?,?,?)',
-    id, body.chapterId, JSON.stringify(body.topics || []), body.stem, JSON.stringify(body.options || []), body.correct || null, body.solution || '', 'pending', noMatch, 0);
+  await run('INSERT INTO bank_questions(id,chapter_id,topics_json,stem,options_json,correct_key,solution,key_points_json,review_status,no_match,solution_only) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+    id, body.chapterId, JSON.stringify(body.topics || []), body.stem, JSON.stringify(body.options || []), body.correct || null, body.solution || '', JSON.stringify(body.keyPoints || []), 'pending', noMatch, 0);
   for (const m of suggestions) await run('INSERT INTO question_index_map(bank_question_id,index_question_id,score,status,rationale) VALUES(?,?,?,?,?)', id, m.indexId, m.score, m.status, m.rationale);
   return { id, suggestions, noMatch: !!noMatch };
 });

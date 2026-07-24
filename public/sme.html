@@ -346,6 +346,7 @@ function viewBankForm(){
     '<div class="field"><label>Question stem</label><textarea data-field="stem" placeholder="Type the question…">'+esc(fval('stem'))+'</textarea></div>'+
     '<div class="field"><label>Options</label>'+opt('A')+opt('B')+opt('C')+opt('D')+'</div>'+
     '<div class="field"><label>Solution</label><textarea data-field="solution" placeholder="Worked solution…">'+esc(fval('solution'))+'</textarea></div>'+
+    '<div class="field"><label>Notes <span class="hint">(optional · key things to remember · one per line · shown to students in Practice)</span></label><textarea data-field="bankKeypoints" placeholder="One key point per line…">'+esc(fval('bankKeypoints'))+'</textarea></div>'+
     '<div class="actions"><button class="btn primary" data-act="savebank">Save &amp; run AI match</button><button class="btn" data-act="cancelform">Cancel</button></div></div>';
 }
 
@@ -489,7 +490,8 @@ async function saveIndex(){
 async function saveBank(){
   if(!(S.form.topics&&S.form.topics.length)||!S.form.stem){ toast('Pick at least one topic and add a stem'); return; }
   var options=['A','B','C','D'].map(k=>[k, S.form['o'+k]||'']).filter(o=>o[1]!=='');
-  var body={ chapterId:S.chapterId, topics:S.form.topics.slice(), stem:S.form.stem, options, correct:S.form.correct||null, solution:S.form.solution };
+  var body={ chapterId:S.chapterId, topics:S.form.topics.slice(), stem:S.form.stem, options, correct:S.form.correct||null, solution:S.form.solution,
+    keyPoints:(S.form.bankKeypoints||'').split('\n').map(x=>x.trim()).filter(Boolean) };
   var r=await api('/bank-questions','POST',body);
   toast(r.noMatch?'No match found — review needed':'AI suggested '+r.suggestions.length+' mapping(s) — please review');
   await goReview(r.id);

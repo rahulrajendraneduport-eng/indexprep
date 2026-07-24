@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS index_questions (id TEXT PRIMARY KEY, chapter_id TEXT
   key_points_json TEXT, note TEXT, note_source TEXT, active INTEGER DEFAULT 1);
 CREATE TABLE IF NOT EXISTS bank_questions (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, topics_json TEXT NOT NULL,
   stem TEXT NOT NULL, options_json TEXT, correct_key TEXT, solution TEXT, difficulty TEXT DEFAULT 'Medium',
-  review_status TEXT DEFAULT 'pending', no_match INTEGER DEFAULT 0, solution_only INTEGER DEFAULT 0);
+  review_status TEXT DEFAULT 'pending', no_match INTEGER DEFAULT 0, solution_only INTEGER DEFAULT 0, key_points_json TEXT);
 CREATE TABLE IF NOT EXISTS question_index_map (id SERIAL PRIMARY KEY, bank_question_id TEXT NOT NULL,
   index_question_id TEXT NOT NULL, score REAL, status TEXT DEFAULT 'ai_suggested', rationale TEXT);
 CREATE TABLE IF NOT EXISTS question_media (id SERIAL PRIMARY KEY, question_id TEXT NOT NULL,
@@ -58,6 +58,8 @@ async function init() {
   } else {
     await pool.query(SCHEMA);
   }
+  // additive, non-destructive migrations (safe to run every boot)
+  await pool.query('ALTER TABLE bank_questions ADD COLUMN IF NOT EXISTS key_points_json TEXT');
 }
 async function all(sql, ...p) { const r = await pool.query(conv(sql), p); return r.rows; }
 async function get(sql, ...p) { const r = await pool.query(conv(sql), p); return r.rows[0]; }

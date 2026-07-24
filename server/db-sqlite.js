@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS index_questions (id TEXT PRIMARY KEY, chapter_id TEXT
   key_points_json TEXT, note TEXT, note_source TEXT, active INTEGER DEFAULT 1);
 CREATE TABLE IF NOT EXISTS bank_questions (id TEXT PRIMARY KEY, chapter_id TEXT NOT NULL, topics_json TEXT NOT NULL,
   stem TEXT NOT NULL, options_json TEXT, correct_key TEXT, solution TEXT, difficulty TEXT DEFAULT 'Medium',
-  review_status TEXT DEFAULT 'pending', no_match INTEGER DEFAULT 0, solution_only INTEGER DEFAULT 0);
+  review_status TEXT DEFAULT 'pending', no_match INTEGER DEFAULT 0, solution_only INTEGER DEFAULT 0, key_points_json TEXT);
 CREATE TABLE IF NOT EXISTS question_index_map (id INTEGER PRIMARY KEY AUTOINCREMENT, bank_question_id TEXT NOT NULL,
   index_question_id TEXT NOT NULL, score REAL, status TEXT DEFAULT 'ai_suggested', rationale TEXT);
 CREATE TABLE IF NOT EXISTS question_media (id INTEGER PRIMARY KEY AUTOINCREMENT, question_id TEXT NOT NULL,
@@ -45,6 +45,10 @@ DROP TABLE IF EXISTS question_index_map; DROP TABLE IF EXISTS bank_questions; DR
 DROP TABLE IF EXISTS topics; DROP TABLE IF EXISTS chapters; DROP TABLE IF EXISTS subjects; DROP TABLE IF EXISTS courses;
 `;
 
+function ensureCol(table, col, decl) {
+  const cols = db.prepare('PRAGMA table_info(' + table + ')').all();
+  if (!cols.some(c => c.name === col)) db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + col + ' ' + decl);
+}
 async function init() {
   db.exec('CREATE TABLE IF NOT EXISTS schema_meta (k TEXT PRIMARY KEY, v TEXT);');
   const row = db.prepare('SELECT v FROM schema_meta WHERE k=?').get('version');
@@ -55,6 +59,8 @@ async function init() {
   } else {
     db.exec(SCHEMA);
   }
+  // additive, non-destructive migrations (safe to run every boot)
+  ensureCol('bank_questions', 'key_points_json', 'TEXT');
 }
 async function all(sql, ...p) { return db.prepare(sql).all(...p); }
 async function get(sql, ...p) { return db.prepare(sql).get(...p); }
